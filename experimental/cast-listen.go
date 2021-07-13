@@ -29,8 +29,7 @@ func listenInbound() {
 		Error(err)
 		msg := string(buffer[:length])
 
-		//inbound_from := addr.(*net.UDPAddr).String()
-		inbound_from := addr.String()
+		inbound_from := addr.(*net.UDPAddr).String()
 
 		fmt.Printf("Inbound %v > %v as “%s”\n", inbound_from, InboundTo, msg)
 	}
