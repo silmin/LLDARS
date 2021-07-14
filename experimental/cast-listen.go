@@ -7,8 +7,11 @@ import (
 	"time"
 )
 
+// TODO: serverとclientそれぞれクラスで実装してmainから選択するようにする
+// TODO: 実際にどうするかは悩むけど，クライアントもクラスにしておいた方が移植楽そうなので
+
 var InboundTo string = "192.168.100.255:60000"
-var OutboundFrom string = "192.168.100.1:60000"
+var OutboundFrom string = ":60000"
 var OutboundTo string = "192.168.100.255:60000"
 var BufferByte int = 64
 var IntervalSeconds int = 1 // * 1 sec

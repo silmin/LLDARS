@@ -7,11 +7,13 @@ import (
 	"time"
 )
 
-var InboundTo string = "192.168.100.255:60000"
-var OutboundFrom string = "192.168.100.1:60000"
-var OutboundTo string = "192.168.100.255:60000"
-var BufferByte int = 64
-var IntervalSeconds int = 1 // * 1 sec
+const (
+	InboundTo       = "192.168.100.255:60000"
+	OutboundFrom    = "192.168.100.1:60000"
+	OutboundTo      = "192.168.100.255:60000"
+	BufferByte      = 1024
+	IntervalSeconds = 1
+)
 
 func broadcastOutbound(cancelBroadcast <-chan struct{}) {
 	from_udp_endpoint, err := net.ResolveUDPAddr("udp", OutboundFrom)
@@ -41,29 +43,28 @@ func broadcastOutbound(cancelBroadcast <-chan struct{}) {
 	}
 }
 
-func listenInbound(cancelBroadcast chan<- struct{}) {
-	to_udp_endpoint, err := net.ResolveUDPAddr("udp", InboundTo)
-	Error(err)
+func handleConnection(conn net.Conn, cancelBroadcast chan<- struct{}) {
+	defer conn.Close()
+	buf := make([]byte, BufferByte)
+	n, err := conn.Read(buf)
+	if err != nil {
+		fmt.Printf("Read Error: %s\n", err)
+	}
+	data := string(buf[:n])
+	fmt.Printf("Receive msg: %s\n", data)
+	close(cancelBroadcast)
+}
 
-	inbound, err := net.ListenUDP("udp", to_udp_endpoint)
+func listenInbound(cancelBroadcast chan<- struct{}) {
+	psock, err := net.Listen("tcp", ":60000")
 	Error(err)
-	defer inbound.Close()
 	fmt.Printf("Listened *:* > %s\n", InboundTo)
 
-	buffer := make([]byte, BufferByte)
 	for {
 		// Inbound message
-		length, addr, err := inbound.ReadFrom(buffer)
+		conn, err := psock.Accept()
 		Error(err)
-		msg := string(buffer[:length])
-
-		inbound_from := addr.(*net.UDPAddr).String()
-		if inbound_from == OutboundFrom {
-			continue
-		}
-
-		fmt.Printf("Inbound %v > %v as “%s”\n", inbound_from, InboundTo, msg)
-		close(cancelBroadcast)
+		go handleConnection(conn, cancelBroadcast)
 	}
 }
 
