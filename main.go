@@ -4,7 +4,7 @@ import (
 	"context"
 	"time"
 
-	"github.com/silmin/lldars/experimental/client"
+	"github.com/silmin/lldars/client"
 )
 
 func main() {

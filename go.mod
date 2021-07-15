@@ -1,3 +1,3 @@
-module github.com/silmin/lldars/experimental
+module github.com/silmin/lldars
 
-go 1.14
+go 1.16
