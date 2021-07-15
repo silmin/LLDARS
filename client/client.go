@@ -25,7 +25,7 @@ func NewClient(buf int) *Client {
 	}
 }
 
-func (c *Client) Broadcast(ctx context.Context, toAddr string) {
+func (c *Client) Broadcast(ctx context.Context, close context.CancelFunc, toAddr string) {
 	conn, err := net.Dial("udp", toAddr)
 	Error(err)
 	defer conn.Close()
@@ -43,14 +43,14 @@ func (c *Client) Broadcast(ctx context.Context, toAddr string) {
 	udpLn, err := net.ListenUDP("udp", udpAddr)
 
 	listenCtx, listenCancel := context.WithTimeout(ctx, time.Duration(TimeoutSeconds)*time.Second)
-	go c.listenAck(listenCtx, udpLn)
+	go c.listenAck(listenCtx, udpLn, close)
 
 	msg := udpLn.LocalAddr().String()
 	for {
 		select {
 		case <-ctx.Done():
 			listenCancel()
-			log.Println("broadcast timeout")
+			log.Println("End Broadcast")
 			return
 		case <-ticker.C:
 			// broadcast
@@ -60,7 +60,7 @@ func (c *Client) Broadcast(ctx context.Context, toAddr string) {
 	}
 }
 
-func (c *Client) listenAck(ctx context.Context, udpLn *net.UDPConn) {
+func (c *Client) listenAck(ctx context.Context, udpLn *net.UDPConn, close context.CancelFunc) {
 	log.Println("Start listenAck()")
 
 	buf := make([]byte, c.bufferSize)
@@ -70,6 +70,7 @@ func (c *Client) listenAck(ctx context.Context, udpLn *net.UDPConn) {
 	fromAddr := from.(*net.UDPAddr).String()
 
 	log.Printf("Recieve from: %v\tmsg: %s\n", fromAddr, msg)
+	close()
 }
 
 func (c *Client) parseAddr(addr string) (string, string) {
