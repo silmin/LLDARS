@@ -57,7 +57,7 @@ func (c *Client) Broadcast(ctx context.Context, toAddr string, fromAddr string, 
 func (c *Client) listenAck(ctx context.Context, cancel context.CancelFunc, addr string) {
 	psock, err := net.Listen("tcp", addr)
 	c.Error(err)
-	log.Printf("Listened *:* > %s\n", addr)
+	log.Printf("Listened *:* tcp > %s\n", addr)
 
 	for {
 		// Inbound message
