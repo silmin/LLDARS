@@ -10,7 +10,12 @@ const (
 	IntervalSeconds = 1
 )
 
-func listenDelivering(addr string) error {
+func Server(listenDeliveringAddr string) error {
+	listenDeliveringRequest(listenDeliveringAddr)
+	return nil
+}
+
+func listenDeliveringRequest(addr string) error {
 	udpAddr, err := net.ResolveUDPAddr("udp", addr)
 	Error(err)
 	udpLn, err := net.ListenUDP("udp", udpAddr)
@@ -31,9 +36,4 @@ func Error(_err error) {
 	if _err != nil {
 		log.Panic(_err)
 	}
-}
-
-func Server(listenDeliveringAddr string) error {
-	listenDelivering(listenDeliveringAddr)
-	return nil
 }
