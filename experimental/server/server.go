@@ -23,7 +23,7 @@ func listenDeliveringRequest(addr string) error {
 	Error(err)
 	defer udpLn.Close()
 
-	log.Printf("Listened Delivering Request *:* udp > %s\n", addr)
+	log.Printf("Listened Delivering Requests *:* udp > %s\n", addr)
 	buf := make([]byte, BufferSize)
 	for {
 		length, from, err := udpLn.ReadFrom(buf)
@@ -32,7 +32,9 @@ func listenDeliveringRequest(addr string) error {
 		fromAddr := from.(*net.UDPAddr).String()
 		log.Printf("Receive %v > %v\nmsg: %s\n", fromAddr, addr, msg)
 
-		udpLn.WriteTo([]byte("Ack!"), from)
+		ackAddr, err := net.ResolveUDPAddr("udp", msg)
+
+		udpLn.WriteToUDP([]byte("Ack!"), ackAddr)
 	}
 }
 

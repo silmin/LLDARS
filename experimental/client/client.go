@@ -4,7 +4,7 @@ import (
 	"context"
 	"log"
 	"net"
-	"os"
+	"strings"
 	"time"
 )
 
@@ -25,23 +25,27 @@ func NewClient(buf int) *Client {
 	}
 }
 
-func (c *Client) Broadcast(ctx context.Context, toAddr string, fromAddr string, listenAddr string) {
-	fromEp, err := net.ResolveUDPAddr("udp", fromAddr)
-	toEp, err := net.ResolveUDPAddr("udp", toAddr)
-	conn, err := net.DialUDP("udp", fromEp, toEp)
+func (c *Client) Broadcast(ctx context.Context, toAddr string) {
+	conn, err := net.Dial("udp", toAddr)
 	Error(err)
 	defer conn.Close()
-	log.Printf("Connected %s > %s\n", fromAddr, toAddr)
-
-	// Get hostname
-	msg, err := os.Hostname()
-	Error(err)
+	log.Printf("Connected > %s\n", toAddr)
 
 	ticker := time.NewTicker(time.Duration(IntervalSeconds) * time.Second)
 	defer ticker.Stop()
 
+	// listen udp for ack
+	ip, _ := c.parseAddr(conn.LocalAddr().String())
+	udpAddr := &net.UDPAddr{
+		IP:   net.ParseIP(ip),
+		Port: 0,
+	}
+	udpLn, err := net.ListenUDP("udp", udpAddr)
+
 	listenCtx, listenCancel := context.WithTimeout(ctx, time.Duration(TimeoutSeconds)*time.Second)
-	go c.listenAck(listenCtx, conn)
+	go c.listenAck(listenCtx, udpLn)
+
+	msg := udpLn.LocalAddr().String()
 	for {
 		select {
 		case <-ctx.Done():
@@ -49,22 +53,28 @@ func (c *Client) Broadcast(ctx context.Context, toAddr string, fromAddr string, 
 			log.Println("broadcast timeout")
 			return
 		case <-ticker.C:
-			// Outbound message
+			// broadcast
 			conn.Write([]byte(msg))
-			log.Printf("Cast %v > %v as “%s”\n", fromEp, toEp, msg)
+			log.Printf("Cast > %v as “%s”\n", toAddr, msg)
 		}
 	}
 }
 
-func (c *Client) listenAck(ctx context.Context, conn *net.UDPConn) {
-	buf := make([]byte, c.bufferSize)
+func (c *Client) listenAck(ctx context.Context, udpLn *net.UDPConn) {
+	log.Println("Start listenAck()")
 
-	length, from, err := conn.ReadFrom(buf)
+	buf := make([]byte, c.bufferSize)
+	length, from, err := udpLn.ReadFrom(buf)
 	Error(err)
 	msg := string(buf[:length])
 	fromAddr := from.(*net.UDPAddr).String()
 
-	log.Printf("Recieve %v > %v\nmsg: %s\n", fromAddr, conn.LocalAddr().String(), msg)
+	log.Printf("Recieve from: %v\tmsg: %s\n", fromAddr, msg)
+}
+
+func (c *Client) parseAddr(addr string) (string, string) {
+	s := strings.Split(addr, ":")
+	return s[0], s[1]
 }
 
 func Error(_err error) {
