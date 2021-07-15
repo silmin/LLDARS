@@ -22,6 +22,7 @@ func listenDeliveringRequest(addr string) error {
 	Error(err)
 	defer udpLn.Close()
 
+	log.Printf("Listen Delivering Request %s", addr)
 	buf := make([]byte, BufferSize)
 	for {
 		length, from, err := udpLn.ReadFromUDP(buf)
