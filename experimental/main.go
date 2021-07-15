@@ -2,17 +2,18 @@ package main
 
 import (
 	"context"
+	"time"
 
 	"github.com/silmin/lldars/experimental/client"
-	"github.com/silmin/lldars/experimental/server"
 )
 
 func main() {
 	// Client
 	c := client.NewClient(1000)
-	ctx := context.Background()
+	ctx, close := context.WithTimeout(context.Background(), time.Duration(client.TimeoutSeconds)*time.Second)
 	c.Broadcast(ctx, "192.168.100.255:60000", ":60000", "192.168.100.1:60000")
+	close()
 
 	// Server
-	server.Server("192.168.100.1:60000")
+	//server.Server("192.168.100.255:60000")
 }

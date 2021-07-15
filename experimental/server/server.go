@@ -8,6 +8,7 @@ import (
 const (
 	BufferSize      = 1000
 	IntervalSeconds = 1
+	TimeoutSeconds  = 10
 )
 
 func Server(listenDeliveringAddr string) error {
@@ -25,13 +26,13 @@ func listenDeliveringRequest(addr string) error {
 	log.Printf("Listened Delivering Request *:* udp > %s\n", addr)
 	buf := make([]byte, BufferSize)
 	for {
-		log.Println("Start ReadFromUDP")
 		length, from, err := udpLn.ReadFrom(buf)
-		log.Println("Done ReadFromUDP")
 		Error(err)
 		msg := string(buf[:length])
 		fromAddr := from.(*net.UDPAddr).String()
-		log.Printf("Inbound %v > %v as \"%s\"\n", fromAddr, addr, msg)
+		log.Printf("Receive %v > %v\nmsg: %s\n", fromAddr, addr, msg)
+
+		udpLn.WriteTo([]byte("Ack!"), from)
 	}
 }
 

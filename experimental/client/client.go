@@ -10,6 +10,7 @@ import (
 
 const (
 	IntervalSeconds = 1
+	TimeoutSeconds  = 10
 )
 
 type Client struct {
@@ -28,57 +29,45 @@ func (c *Client) Broadcast(ctx context.Context, toAddr string, fromAddr string, 
 	fromEp, err := net.ResolveUDPAddr("udp", fromAddr)
 	toEp, err := net.ResolveUDPAddr("udp", toAddr)
 	conn, err := net.DialUDP("udp", fromEp, toEp)
-	c.Error(err)
+	Error(err)
 	defer conn.Close()
 	log.Printf("Connected %s > %s\n", fromAddr, toAddr)
 
 	// Get hostname
 	msg, err := os.Hostname()
-	c.Error(err)
+	Error(err)
 
 	ticker := time.NewTicker(time.Duration(IntervalSeconds) * time.Second)
 	defer ticker.Stop()
 
-	listenCtx, listenCancel := context.WithCancel(ctx)
-	go c.listenAck(listenCtx, listenCancel, listenAddr)
+	listenCtx, listenCancel := context.WithTimeout(ctx, time.Duration(TimeoutSeconds)*time.Second)
+	go c.listenAck(listenCtx, conn)
 	for {
 		select {
 		case <-ctx.Done():
-			log.Println("canceld broadcast")
+			listenCancel()
+			log.Println("broadcast timeout")
 			return
 		case <-ticker.C:
 			// Outbound message
 			conn.Write([]byte(msg))
-			log.Printf("Outbound %v > %v as “%s”\n", fromEp, toEp, msg)
+			log.Printf("Cast %v > %v as “%s”\n", fromEp, toEp, msg)
 		}
 	}
 }
 
-func (c *Client) listenAck(ctx context.Context, cancel context.CancelFunc, addr string) {
-	psock, err := net.Listen("tcp", addr)
-	c.Error(err)
-	log.Printf("Listened *:* tcp > %s\n", addr)
-
-	for {
-		// Inbound message
-		conn, err := psock.Accept()
-		c.Error(err)
-		go c.handleConnection(cancel, conn)
-	}
-}
-
-func (c *Client) handleConnection(cancel context.CancelFunc, conn net.Conn) {
-	defer conn.Close()
+func (c *Client) listenAck(ctx context.Context, conn *net.UDPConn) {
 	buf := make([]byte, c.bufferSize)
-	n, err := conn.Read(buf)
-	c.Error(err)
 
-	data := string(buf[:n])
-	log.Printf("Receive msg: %s\n", data)
-	cancel()
+	length, from, err := conn.ReadFrom(buf)
+	Error(err)
+	msg := string(buf[:length])
+	fromAddr := from.(*net.UDPAddr).String()
+
+	log.Printf("Recieve %v > %v\nmsg: %s\n", fromAddr, conn.LocalAddr().String(), msg)
 }
 
-func (c *Client) Error(_err error) {
+func Error(_err error) {
 	if _err != nil {
 		log.Panic(_err)
 	}
