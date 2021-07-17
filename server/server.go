@@ -1,22 +1,24 @@
 package server
 
 import (
+	"fmt"
 	"log"
 	"net"
+
+	"github.com/silmin/lldars/pkg/lldars"
 )
 
 const (
-	BufferSize      = 1000
 	IntervalSeconds = 1
 	TimeoutSeconds  = 10
 )
 
 func Server(listenDeliveringAddr string) error {
-	listenDeliveringRequest(listenDeliveringAddr)
+	listenDeliveryRequest(listenDeliveringAddr)
 	return nil
 }
 
-func listenDeliveringRequest(addr string) error {
+func listenDeliveryRequest(addr string) error {
 	udpAddr, err := net.ResolveUDPAddr("udp", addr)
 	Error(err)
 	udpLn, err := net.ListenUDP("udp", udpAddr)
@@ -24,17 +26,18 @@ func listenDeliveringRequest(addr string) error {
 	defer udpLn.Close()
 
 	log.Printf("Listened Delivering Requests *:* udp > %s\n", addr)
-	buf := make([]byte, BufferSize)
+	buf := make([]byte, lldars.LLDARSLayerSize)
 	for {
-		length, from, err := udpLn.ReadFrom(buf)
+		length, err := udpLn.Read(buf)
 		Error(err)
 		msg := string(buf[:length])
-		fromAddr := from.(*net.UDPAddr).String()
-		log.Printf("Receive %v > %v\nmsg: %s\n", fromAddr, addr, msg)
+		rl := lldars.Unmarshal([]byte(msg))
+		log.Printf("Receive %v > %v\nmsg: %s\n", rl.Origin, addr, rl.Payload)
 
-		ackAddr, err := net.ResolveUDPAddr("udp", msg)
-
-		udpLn.WriteToUDP([]byte("Ack!"), ackAddr)
+		ip := rl.Origin.String() + ":" + fmt.Sprintf("%d", rl.NextPort)
+		ackAddr, err := net.ResolveUDPAddr("udp", ip)
+		sl := lldars.NewServerPortNotify(net.ParseIP(addr), 0)
+		udpLn.WriteToUDP([]byte(sl.Marshal()), ackAddr)
 	}
 }
 

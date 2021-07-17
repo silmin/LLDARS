@@ -4,8 +4,11 @@ import (
 	"context"
 	"log"
 	"net"
+	"strconv"
 	"strings"
 	"time"
+
+	"github.com/silmin/lldars/pkg/lldars"
 )
 
 const (
@@ -45,7 +48,12 @@ func (c *Client) Broadcast(ctx context.Context, close context.CancelFunc, toAddr
 	listenCtx, listenCancel := context.WithTimeout(ctx, time.Duration(TimeoutSeconds)*time.Second)
 	go c.listenAck(listenCtx, udpLn, close)
 
-	msg := udpLn.LocalAddr().String()
+	//msg := udpLn.LocalAddr().String()
+	addr, port := c.parseAddr(udpLn.LocalAddr().String())
+	Error(err)
+	p, _ := strconv.Atoi(port)
+	l := lldars.NewDiscoverBroadcast(net.ParseIP(addr).To4(), uint16(p))
+	msg := l.Marshal()
 	for {
 		select {
 		case <-ctx.Done():
