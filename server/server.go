@@ -13,30 +13,30 @@ const (
 	TimeoutSeconds  = 10
 )
 
-func Server(listenDeliveringAddr string) error {
-	listenDeliveryRequest(listenDeliveringAddr)
+func Server(listenAddr string, origin string) error {
+	listenDiscoverBroadcast(listenAddr, origin)
 	return nil
 }
 
-func listenDeliveryRequest(addr string) error {
-	udpAddr, err := net.ResolveUDPAddr("udp", addr)
+func listenDiscoverBroadcast(listenAddr string, origin string) error {
+	udpAddr, err := net.ResolveUDPAddr("udp", listenAddr)
 	Error(err)
 	udpLn, err := net.ListenUDP("udp", udpAddr)
 	Error(err)
 	defer udpLn.Close()
 
-	log.Printf("Listened Delivering Requests *:* udp > %s\n", addr)
+	log.Printf("Listened Delivering Requests *:* udp > %s\n", listenAddr)
 	buf := make([]byte, lldars.LLDARSLayerSize)
 	for {
 		length, err := udpLn.Read(buf)
 		Error(err)
 		msg := string(buf[:length])
 		rl := lldars.Unmarshal([]byte(msg))
-		log.Printf("Receive %v > %v\nmsg: %s\n", rl.Origin, addr, rl.Payload)
+		log.Printf("Receive %v > %v\nmsg: %s\n", rl.Origin, listenAddr, rl.Payload)
 
-		ip := rl.Origin.String() + ":" + fmt.Sprintf("%d", rl.NextPort)
-		ackAddr, err := net.ResolveUDPAddr("udp", ip)
-		sl := lldars.NewServerPortNotify(net.ParseIP(addr), 0)
+		ipp := rl.Origin.String() + ":" + fmt.Sprintf("%d", rl.NextPort)
+		ackAddr, err := net.ResolveUDPAddr("udp", ipp)
+		sl := lldars.NewServerPortNotify(net.ParseIP(origin), 0)
 		udpLn.WriteToUDP([]byte(sl.Marshal()), ackAddr)
 	}
 }

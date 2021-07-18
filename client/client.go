@@ -63,7 +63,7 @@ func (c *Client) Broadcast(ctx context.Context, close context.CancelFunc, toAddr
 		case <-ticker.C:
 			// broadcast
 			conn.Write([]byte(msg))
-			log.Printf("Cast > %v as “%s”\n", toAddr, msg)
+			log.Printf("Cast > %v as “%s”\n", toAddr, l.Payload)
 		}
 	}
 }

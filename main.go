@@ -14,5 +14,5 @@ func main() {
 	c.Broadcast(ctx, close, "192.168.100.255:60000")
 
 	// Server
-	//server.Server("192.168.100.255:60000")
+	//server.Server("192.168.100.255:60000", "192.168.100.2")
 }
