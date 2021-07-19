@@ -72,12 +72,12 @@ func (c *Client) listenAck(ctx context.Context, udpLn *net.UDPConn, close contex
 	log.Println("Start listenAck()")
 
 	buf := make([]byte, c.bufferSize)
-	length, from, err := udpLn.ReadFrom(buf)
+	length, err := udpLn.Read(buf)
 	Error(err)
 	msg := string(buf[:length])
-	fromAddr := from.(*net.UDPAddr).String()
 
-	log.Printf("Recieve from: %v\tmsg: %s\n", fromAddr, msg)
+	rl := lldars.Unmarshal([]byte(msg))
+	log.Printf("Recieve from: %v\tmsg: %s\n", rl.Origin, rl.Payload)
 	close()
 }
 

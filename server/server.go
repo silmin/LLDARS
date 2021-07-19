@@ -32,11 +32,11 @@ func listenDiscoverBroadcast(listenAddr string, origin string) error {
 		Error(err)
 		msg := string(buf[:length])
 		rl := lldars.Unmarshal([]byte(msg))
-		log.Printf("Receive %v > %v\nmsg: %s\n", rl.Origin, listenAddr, rl.Payload)
+		log.Printf("Receive from: %v\tmsg: %s\n", rl.Origin, rl.Payload)
 
+		sl := lldars.NewServerPortNotify(net.ParseIP(origin), 0)
 		ipp := rl.Origin.String() + ":" + fmt.Sprintf("%d", rl.NextPort)
 		ackAddr, err := net.ResolveUDPAddr("udp", ipp)
-		sl := lldars.NewServerPortNotify(net.ParseIP(origin), 0)
 		udpLn.WriteToUDP([]byte(sl.Marshal()), ackAddr)
 	}
 }
