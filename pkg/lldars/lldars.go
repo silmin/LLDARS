@@ -6,10 +6,10 @@ import (
 )
 
 type LLDARSLayer struct {
-	Type     LLDARSLayerType
-	Origin   net.IP
-	NextPort uint16
-	Payload  []byte
+	Type        LLDARSLayerType
+	Origin      net.IP
+	ServicePort uint16
+	Payload     []byte
 }
 
 type LLDARSLayerType uint8
@@ -25,21 +25,21 @@ const (
 	ServerPortNotifyPayload  = "--NotifyServerPortPayload--"
 )
 
-func NewDiscoverBroadcast(origin net.IP, next uint16) LLDARSLayer {
+func NewDiscoverBroadcast(origin net.IP, sp uint16) LLDARSLayer {
 	return LLDARSLayer{
-		Type:     DiscoverBroadcast,
-		Origin:   origin,
-		NextPort: next,
-		Payload:  []byte(DiscoverBroadcastPayload),
+		Type:        DiscoverBroadcast,
+		Origin:      origin,
+		ServicePort: sp,
+		Payload:     []byte(DiscoverBroadcastPayload),
 	}
 }
 
-func NewServerPortNotify(origin net.IP, next uint16) LLDARSLayer {
+func NewServerPortNotify(origin net.IP, sp uint16) LLDARSLayer {
 	return LLDARSLayer{
-		Type:     ServerPortNotify,
-		Origin:   origin,
-		NextPort: next,
-		Payload:  []byte(ServerPortNotifyPayload),
+		Type:        ServerPortNotify,
+		Origin:      origin,
+		ServicePort: sp,
+		Payload:     []byte(ServerPortNotifyPayload),
 	}
 }
 
@@ -47,7 +47,7 @@ func (l *LLDARSLayer) Marshal() []byte {
 	buf := make([]byte, LLDARSLayerSize)
 	buf[0] = byte(l.Type)
 	binary.BigEndian.PutUint32(buf[1:], ip2int(l.Origin))
-	binary.BigEndian.PutUint16(buf[5:], l.NextPort)
+	binary.BigEndian.PutUint16(buf[5:], l.ServicePort)
 	buf = append(buf, l.Payload...)
 	return buf
 }
@@ -56,7 +56,7 @@ func Unmarshal(buf []byte) LLDARSLayer {
 	var l LLDARSLayer
 	l.Type = LLDARSLayerType(buf[0])
 	l.Origin = int2ip(binary.BigEndian.Uint32(buf[1:]))
-	l.NextPort = binary.BigEndian.Uint16(buf[5:])
+	l.ServicePort = binary.BigEndian.Uint16(buf[5:])
 	l.Payload = buf[7:]
 	return l
 }

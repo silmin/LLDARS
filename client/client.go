@@ -2,6 +2,7 @@ package client
 
 import (
 	"context"
+	"fmt"
 	"log"
 	"net"
 	"strconv"
@@ -14,6 +15,7 @@ import (
 const (
 	IntervalSeconds = 1
 	TimeoutSeconds  = 10
+	BroadcastAddr   = "192.168.100.255:60000"
 )
 
 type Client struct {
@@ -28,11 +30,20 @@ func NewClient(buf int) *Client {
 	}
 }
 
-func (c *Client) Broadcast(ctx context.Context, close context.CancelFunc, toAddr string) {
-	conn, err := net.Dial("udp", toAddr)
+func (c *Client) DoAct() {
+	ctx, close := context.WithTimeout(context.Background(), time.Duration(TimeoutSeconds)*time.Second)
+	nextAddrChan := make(chan string)
+	go c.Broadcast(ctx, close, nextAddrChan)
+
+	nextAddr := <-nextAddrChan
+	log.Printf("service addr: %s\n", nextAddr)
+}
+
+func (c *Client) Broadcast(ctx context.Context, close context.CancelFunc, nextAddrChan chan<- string) {
+	conn, err := net.Dial("udp", BroadcastAddr)
 	Error(err)
 	defer conn.Close()
-	log.Printf("Connected > %s\n", toAddr)
+	log.Printf("Connected > %s\n", BroadcastAddr)
 
 	ticker := time.NewTicker(time.Duration(IntervalSeconds) * time.Second)
 	defer ticker.Stop()
@@ -46,9 +57,8 @@ func (c *Client) Broadcast(ctx context.Context, close context.CancelFunc, toAddr
 	udpLn, err := net.ListenUDP("udp", udpAddr)
 
 	listenCtx, listenCancel := context.WithTimeout(ctx, time.Duration(TimeoutSeconds)*time.Second)
-	go c.listenAck(listenCtx, udpLn, close)
+	go c.listenAck(listenCtx, udpLn, close, nextAddrChan)
 
-	//msg := udpLn.LocalAddr().String()
 	addr, port := c.parseAddr(udpLn.LocalAddr().String())
 	Error(err)
 	p, _ := strconv.Atoi(port)
@@ -63,12 +73,12 @@ func (c *Client) Broadcast(ctx context.Context, close context.CancelFunc, toAddr
 		case <-ticker.C:
 			// broadcast
 			conn.Write([]byte(msg))
-			log.Printf("Cast > %v as “%s”\n", toAddr, l.Payload)
+			log.Printf("Cast > %v as “%s”\n", BroadcastAddr, l.Payload)
 		}
 	}
 }
 
-func (c *Client) listenAck(ctx context.Context, udpLn *net.UDPConn, close context.CancelFunc) {
+func (c *Client) listenAck(ctx context.Context, udpLn *net.UDPConn, close context.CancelFunc, nextAddrChan chan<- string) {
 	log.Println("Start listenAck()")
 
 	buf := make([]byte, c.bufferSize)
@@ -78,6 +88,8 @@ func (c *Client) listenAck(ctx context.Context, udpLn *net.UDPConn, close contex
 
 	rl := lldars.Unmarshal([]byte(msg))
 	log.Printf("Recieve from: %v\tmsg: %s\n", rl.Origin, rl.Payload)
+
+	nextAddrChan <- rl.Origin.String() + ":" + fmt.Sprintf("%d", rl.ServicePort)
 	close()
 }
 
