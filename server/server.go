@@ -38,7 +38,7 @@ func listenDiscoverBroadcast(listenAddr string, origin string) error {
 		ipp := rl.Origin.String() + ":" + fmt.Sprintf("%d", rl.ServicePort)
 		ackAddr, err := net.ResolveUDPAddr("udp", ipp)
 		udpLn.WriteToUDP([]byte(sl.Marshal()), ackAddr)
-		log.Printf("Ack to: %v\tmsg: %s\n", ackAddr.IP.String(), rl.Payload)
+		log.Printf("Ack to: %v\tmsg: %s\n", ackAddr.IP.String(), sl.Payload)
 	}
 }
 
