@@ -35,7 +35,7 @@ func listenDiscoverBroadcast(listenAddr string, origin string) error {
 		log.Printf("Receive from: %v\tmsg: %s\n", rl.Origin, rl.Payload)
 
 		sl := lldars.NewServerPortNotify(net.ParseIP(origin), 0)
-		ipp := rl.Origin.String() + ":" + fmt.Sprintf("%d", rl.NextPort)
+		ipp := rl.Origin.String() + ":" + fmt.Sprintf("%d", rl.ServicePort)
 		ackAddr, err := net.ResolveUDPAddr("udp", ipp)
 		udpLn.WriteToUDP([]byte(sl.Marshal()), ackAddr)
 		log.Printf("Ack to: %v\tmsg: %s\n", ackAddr.IP.String(), rl.Payload)
