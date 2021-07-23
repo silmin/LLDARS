@@ -16,30 +16,41 @@ type LLDARSLayerType uint8
 
 const (
 	DiscoverBroadcast LLDARSLayerType = iota
-	ServerPortNotify
+	ServicePortNotify
+	GetObjectRequest
+	DeliveryObject
 )
 
 const (
 	LLDARSLayerSize          = 1 + 4 + 2
 	DiscoverBroadcastPayload = "Is available LLDARS server on this network ?"
-	ServerPortNotifyPayload  = "--NotifyServerPortPayload--"
+	ServicePortNotifyPayload = "--NotifyServerPortPayload--"
+	GetObjectRequestPayload  = "--GetObjectRequestPayload--"
+	DeliveryObjectPayload    = "--DeliveryObjectPayload--"
 )
 
 func NewDiscoverBroadcast(origin net.IP, sp uint16) LLDARSLayer {
-	return LLDARSLayer{
-		Type:        DiscoverBroadcast,
-		Origin:      origin,
-		ServicePort: sp,
-		Payload:     []byte(DiscoverBroadcastPayload),
-	}
+	return NewLLDARSPacket(origin, sp, DiscoverBroadcast, DiscoverBroadcastPayload)
 }
 
 func NewServerPortNotify(origin net.IP, sp uint16) LLDARSLayer {
+	return NewLLDARSPacket(origin, sp, ServicePortNotify, ServicePortNotifyPayload)
+}
+
+func NewGetObjectRequest(origin net.IP, sp uint16) LLDARSLayer {
+	return NewLLDARSPacket(origin, sp, GetObjectRequest, GetObjectRequestPayload)
+}
+
+func NewDeliveryObject(origin net.IP, sp uint16) LLDARSLayer {
+	return NewLLDARSPacket(origin, sp, DeliveryObject, DeliveryObjectPayload)
+}
+
+func NewLLDARSPacket(origin net.IP, sp uint16, t LLDARSLayerType, p string) LLDARSLayer {
 	return LLDARSLayer{
-		Type:        ServerPortNotify,
+		Type:        t,
 		Origin:      origin,
 		ServicePort: sp,
-		Payload:     []byte(ServerPortNotifyPayload),
+		Payload:     []byte(p),
 	}
 }
 

@@ -32,14 +32,35 @@ func NewClient(buf int) *Client {
 
 func (c *Client) DoAct() {
 	ctx, close := context.WithTimeout(context.Background(), time.Duration(TimeoutSeconds)*time.Second)
-	nextAddrChan := make(chan string)
-	go c.Broadcast(ctx, close, nextAddrChan)
+	defer close()
+	serviceAddr := make(chan string)
+	go c.Broadcast(ctx, serviceAddr)
 
-	nextAddr := <-nextAddrChan
-	log.Printf("service addr: %s\n", nextAddr)
+	addr := <-serviceAddr
+	log.Printf("service addr: %s\n", addr)
+
+	c.getObjects(addr)
 }
 
-func (c *Client) Broadcast(ctx context.Context, close context.CancelFunc, nextAddrChan chan<- string) {
+func (c *Client) getObjects(addr string) {
+	conn, err := net.Dial("tcp", addr)
+	Error(err)
+	defer conn.Close()
+
+	sl := lldars.NewGetObjectRequest(net.IP(conn.LocalAddr().String()), 0)
+	msg := sl.Marshal()
+	conn.Write(msg)
+
+	for i := 0; i < 3; i++ {
+		buf := make([]byte, 1000)
+		length, err := conn.Read(buf)
+		Error(err)
+		rl := lldars.Unmarshal(buf[:length])
+		log.Printf("Recieve from: %v\tmsg: %s\n", rl.Origin, rl.Payload)
+	}
+}
+
+func (c *Client) Broadcast(ctx context.Context, servicePort chan<- string) {
 	conn, err := net.Dial("udp", BroadcastAddr)
 	Error(err)
 	defer conn.Close()
@@ -49,7 +70,7 @@ func (c *Client) Broadcast(ctx context.Context, close context.CancelFunc, nextAd
 	defer ticker.Stop()
 
 	// listen udp for ack
-	ip, _ := c.parseAddr(conn.LocalAddr().String())
+	ip, _ := c.parseIpPort(conn.LocalAddr().String())
 	udpAddr := &net.UDPAddr{
 		IP:   net.ParseIP(ip),
 		Port: 0,
@@ -57,9 +78,10 @@ func (c *Client) Broadcast(ctx context.Context, close context.CancelFunc, nextAd
 	udpLn, err := net.ListenUDP("udp", udpAddr)
 
 	listenCtx, listenCancel := context.WithTimeout(ctx, time.Duration(TimeoutSeconds)*time.Second)
-	go c.listenAck(listenCtx, udpLn, close, nextAddrChan)
+	defer listenCancel()
+	go c.listenAck(listenCtx, udpLn, servicePort)
 
-	addr, port := c.parseAddr(udpLn.LocalAddr().String())
+	addr, port := c.parseIpPort(udpLn.LocalAddr().String())
 	Error(err)
 	p, _ := strconv.Atoi(port)
 	l := lldars.NewDiscoverBroadcast(net.ParseIP(addr).To4(), uint16(p))
@@ -67,18 +89,17 @@ func (c *Client) Broadcast(ctx context.Context, close context.CancelFunc, nextAd
 	for {
 		select {
 		case <-ctx.Done():
-			listenCancel()
 			log.Println("End Broadcast")
 			return
 		case <-ticker.C:
 			// broadcast
-			conn.Write([]byte(msg))
-			log.Printf("Cast > %v as “%s”\n", BroadcastAddr, l.Payload)
+			conn.Write(msg)
+			log.Printf("Cast > %v : “%s”\n", BroadcastAddr, l.Payload)
 		}
 	}
 }
 
-func (c *Client) listenAck(ctx context.Context, udpLn *net.UDPConn, close context.CancelFunc, nextAddrChan chan<- string) {
+func (c *Client) listenAck(ctx context.Context, udpLn *net.UDPConn, nextAddrChan chan<- string) {
 	log.Println("Start listenAck()")
 
 	buf := make([]byte, c.bufferSize)
@@ -90,10 +111,10 @@ func (c *Client) listenAck(ctx context.Context, udpLn *net.UDPConn, close contex
 	log.Printf("Recieve from: %v\tmsg: %s\n", rl.Origin, rl.Payload)
 
 	nextAddrChan <- rl.Origin.String() + ":" + fmt.Sprintf("%d", rl.ServicePort)
-	close()
+	return
 }
 
-func (c *Client) parseAddr(addr string) (string, string) {
+func (c *Client) parseIpPort(addr string) (string, string) {
 	s := strings.Split(addr, ":")
 	return s[0], s[1]
 }

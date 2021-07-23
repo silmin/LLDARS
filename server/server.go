@@ -1,6 +1,7 @@
 package server
 
 import (
+	"context"
 	"fmt"
 	"log"
 	"net"
@@ -11,14 +12,54 @@ import (
 const (
 	IntervalSeconds = 1
 	TimeoutSeconds  = 10
+	ServicePort     = 60001
 )
 
 func Server(listenAddr string, origin string) error {
-	listenDiscoverBroadcast(listenAddr, origin)
+	ldbCtx, ldbClose := context.WithCancel(context.Background())
+	defer ldbClose()
+
+	go listenDiscoverBroadcast(ldbCtx, listenAddr, origin)
+	listenService()
+
 	return nil
 }
 
-func listenDiscoverBroadcast(listenAddr string, origin string) error {
+func listenService() {
+	ln, err := net.Listen("tcp", fmt.Sprintf(":%d", ServicePort))
+	Error(err)
+	for {
+		conn, err := ln.Accept()
+		Error(err)
+		go handleService(conn)
+	}
+}
+
+func handleService(conn net.Conn) {
+	//buf := make([]byte, lldars.LLDARSLayerSize)
+	buf := make([]byte, 1000)
+	l, err := conn.Read(buf)
+	Error(err)
+	msg := buf[:l]
+	rl := lldars.Unmarshal(msg)
+	log.Printf("Receive from: %v\tmsg: %s\n", rl.Origin, rl.Payload)
+	if rl.Type == lldars.GetObjectRequest {
+		sendObjects(conn, rl)
+	}
+	return
+}
+
+func sendObjects(conn net.Conn, rl lldars.LLDARSLayer) {
+	for i := 0; i < 3; i++ {
+		// オブジェクトファイル(zip)の数
+		sl := lldars.NewDeliveryObject(net.IP(conn.LocalAddr().String()), ServicePort)
+		msg := sl.Marshal()
+		conn.Write(msg)
+		log.Printf("Send Object > %s : %s\n", conn.RemoteAddr().String(), rl.Payload)
+	}
+}
+
+func listenDiscoverBroadcast(ctx context.Context, listenAddr string, origin string) error {
 	udpAddr, err := net.ResolveUDPAddr("udp", listenAddr)
 	Error(err)
 	udpLn, err := net.ListenUDP("udp", udpAddr)
@@ -30,11 +71,11 @@ func listenDiscoverBroadcast(listenAddr string, origin string) error {
 	for {
 		length, err := udpLn.Read(buf)
 		Error(err)
-		msg := string(buf[:length])
-		rl := lldars.Unmarshal([]byte(msg))
+		msg := buf[:length]
+		rl := lldars.Unmarshal(msg)
 		log.Printf("Receive from: %v\tmsg: %s\n", rl.Origin, rl.Payload)
 
-		sl := lldars.NewServerPortNotify(net.ParseIP(origin), 0)
+		sl := lldars.NewServerPortNotify(net.ParseIP(origin), ServicePort)
 		ipp := rl.Origin.String() + ":" + fmt.Sprintf("%d", rl.ServicePort)
 		ackAddr, err := net.ResolveUDPAddr("udp", ipp)
 		udpLn.WriteToUDP([]byte(sl.Marshal()), ackAddr)
