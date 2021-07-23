@@ -38,8 +38,11 @@ func (c *Client) DoAct() {
 
 	addr := <-serviceAddr
 	log.Printf("service addr: %s\n", addr)
+	close() // close broadcast
 
 	c.getObjects(addr)
+
+	return
 }
 
 func (c *Client) getObjects(addr string) {
@@ -47,17 +50,19 @@ func (c *Client) getObjects(addr string) {
 	Error(err)
 	defer conn.Close()
 
-	sl := lldars.NewGetObjectRequest(net.IP(conn.LocalAddr().String()), 0)
+	ip, _ := c.parseIpPort(conn.LocalAddr().String())
+	log.Printf("conn.LocalAddr: %s", conn.LocalAddr().String())
+	sl := lldars.NewGetObjectRequest(net.IP(ip).To4(), 0)
 	msg := sl.Marshal()
 	conn.Write(msg)
 
-	for i := 0; i < 3; i++ {
-		buf := make([]byte, 1000)
-		length, err := conn.Read(buf)
-		Error(err)
-		rl := lldars.Unmarshal(buf[:length])
-		log.Printf("Recieve from: %v\tmsg: %s\n", rl.Origin, rl.Payload)
-	}
+	buf := make([]byte, 1000)
+	length, err := conn.Read(buf)
+	Error(err)
+	rl := lldars.Unmarshal(buf[:length])
+	log.Printf("Recieve from: %v\tmsg: %s\tlen: %d\n", rl.Origin, rl.Payload, length)
+	log.Println("End getObjects()")
+	return
 }
 
 func (c *Client) Broadcast(ctx context.Context, servicePort chan<- string) {
@@ -111,7 +116,6 @@ func (c *Client) listenAck(ctx context.Context, udpLn *net.UDPConn, nextAddrChan
 	log.Printf("Recieve from: %v\tmsg: %s\n", rl.Origin, rl.Payload)
 
 	nextAddrChan <- rl.Origin.String() + ":" + fmt.Sprintf("%d", rl.ServicePort)
-	return
 }
 
 func (c *Client) parseIpPort(addr string) (string, string) {

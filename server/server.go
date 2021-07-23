@@ -50,13 +50,10 @@ func handleService(conn net.Conn) {
 }
 
 func sendObjects(conn net.Conn, rl lldars.LLDARSLayer) {
-	for i := 0; i < 3; i++ {
-		// オブジェクトファイル(zip)の数
-		sl := lldars.NewDeliveryObject(net.IP(conn.LocalAddr().String()), ServicePort)
-		msg := sl.Marshal()
-		conn.Write(msg)
-		log.Printf("Send Object > %s : %s\n", conn.RemoteAddr().String(), rl.Payload)
-	}
+	sl := lldars.NewDeliveryObject(net.IP(conn.LocalAddr().String()).To4(), ServicePort)
+	msg := sl.Marshal()
+	conn.Write(msg)
+	log.Printf("Send Object > %s : %s\n", conn.RemoteAddr().String(), rl.Payload)
 }
 
 func listenDiscoverBroadcast(ctx context.Context, listenAddr string, origin string) error {
