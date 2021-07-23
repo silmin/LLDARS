@@ -3,6 +3,7 @@ package lldars
 import (
 	"encoding/binary"
 	"net"
+	"strings"
 )
 
 type LLDARSLayer struct {
@@ -83,4 +84,9 @@ func int2ip(n uint32) net.IP {
 	ip := make(net.IP, 4)
 	binary.BigEndian.PutUint32(ip, n)
 	return ip
+}
+
+func ParseIpPort(addr string) (string, string) {
+	s := strings.Split(addr, ":")
+	return s[0], s[1]
 }

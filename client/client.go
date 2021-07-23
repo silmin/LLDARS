@@ -6,7 +6,6 @@ import (
 	"log"
 	"net"
 	"strconv"
-	"strings"
 	"time"
 
 	"github.com/silmin/lldars/pkg/lldars"
@@ -50,9 +49,9 @@ func (c *Client) getObjects(addr string) {
 	Error(err)
 	defer conn.Close()
 
-	ip, _ := c.parseIpPort(conn.LocalAddr().String())
+	ip, _ := lldars.ParseIpPort(conn.LocalAddr().String())
 	log.Printf("conn.LocalAddr: %s", conn.LocalAddr().String())
-	sl := lldars.NewGetObjectRequest(net.IP(ip).To4(), 0)
+	sl := lldars.NewGetObjectRequest(net.ParseIP(ip).To4(), 0)
 	msg := sl.Marshal()
 	conn.Write(msg)
 
@@ -75,7 +74,7 @@ func (c *Client) Broadcast(ctx context.Context, servicePort chan<- string) {
 	defer ticker.Stop()
 
 	// listen udp for ack
-	ip, _ := c.parseIpPort(conn.LocalAddr().String())
+	ip, _ := lldars.ParseIpPort(conn.LocalAddr().String())
 	udpAddr := &net.UDPAddr{
 		IP:   net.ParseIP(ip),
 		Port: 0,
@@ -86,7 +85,7 @@ func (c *Client) Broadcast(ctx context.Context, servicePort chan<- string) {
 	defer listenCancel()
 	go c.listenAck(listenCtx, udpLn, servicePort)
 
-	addr, port := c.parseIpPort(udpLn.LocalAddr().String())
+	addr, port := lldars.ParseIpPort(udpLn.LocalAddr().String())
 	Error(err)
 	p, _ := strconv.Atoi(port)
 	l := lldars.NewDiscoverBroadcast(net.ParseIP(addr).To4(), uint16(p))
@@ -116,11 +115,6 @@ func (c *Client) listenAck(ctx context.Context, udpLn *net.UDPConn, nextAddrChan
 	log.Printf("Recieve from: %v\tmsg: %s\n", rl.Origin, rl.Payload)
 
 	nextAddrChan <- rl.Origin.String() + ":" + fmt.Sprintf("%d", rl.ServicePort)
-}
-
-func (c *Client) parseIpPort(addr string) (string, string) {
-	s := strings.Split(addr, ":")
-	return s[0], s[1]
 }
 
 func Error(_err error) {

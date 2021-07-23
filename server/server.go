@@ -50,7 +50,8 @@ func handleService(conn net.Conn) {
 }
 
 func sendObjects(conn net.Conn, rl lldars.LLDARSLayer) {
-	sl := lldars.NewDeliveryObject(net.IP(conn.LocalAddr().String()).To4(), ServicePort)
+	ip, _ := lldars.ParseIpPort(conn.LocalAddr().String())
+	sl := lldars.NewDeliveryObject(net.ParseIP(ip).To4(), ServicePort)
 	msg := sl.Marshal()
 	conn.Write(msg)
 	log.Printf("Send Object > %s : %s\n", conn.RemoteAddr().String(), rl.Payload)
