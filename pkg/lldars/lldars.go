@@ -54,7 +54,7 @@ func NewDeliveryObject(origin net.IP, sp uint16, l uint64, obj []byte) LLDARSLay
 
 func NewEndDelivery(origin net.IP, sp uint16) LLDARSLayer {
 	l := uint64(len(DiscoverBroadcastPayload))
-	return NewLLDARSPacket(origin, sp, l, DeliveryObject, []byte(EndDeliveryPayload))
+	return NewLLDARSPacket(origin, sp, l, EndDelivery, []byte(EndDeliveryPayload))
 }
 
 func NewLLDARSPacket(origin net.IP, sp uint16, l uint64, t LLDARSLayerType, p []byte) LLDARSLayer {
