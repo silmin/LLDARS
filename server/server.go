@@ -15,7 +15,7 @@ const (
 	IntervalSeconds = 1
 	TimeoutSeconds  = 10
 	ServicePort     = 60001
-	ObjectPath      = "./data/"
+	SendObjectPath  = "../send_data/"
 )
 
 func Server(listenAddr string, origin string) error {

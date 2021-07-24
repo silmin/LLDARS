@@ -13,9 +13,10 @@ import (
 )
 
 const (
-	IntervalSeconds = 1
-	TimeoutSeconds  = 10
-	BroadcastAddr   = "192.168.100.255:60000"
+	IntervalSeconds   = 1
+	TimeoutSeconds    = 10
+	BroadcastAddr     = "192.168.100.255:60000"
+	ReceiveObjectPath = "../receive_data/"
 )
 
 type Client struct {
@@ -59,7 +60,7 @@ func (c *Client) getObjects(addr string) {
 	fc := 0
 
 	for {
-		filename := fmt.Sprintf("./receive_data/%d.zip", fc)
+		filename := ReceiveObjectPath + fmt.Sprintf("%d.zip", fc)
 		buf := make([]byte, lldars.LLDARSLayerSize)
 		length, err := conn.Read(buf)
 		Error(err)
