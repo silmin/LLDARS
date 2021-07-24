@@ -51,10 +51,13 @@ func handleService(conn net.Conn) {
 
 func sendObjects(conn net.Conn, rl lldars.LLDARSLayer) {
 	ip, _ := lldars.ParseIpPort(conn.LocalAddr().String())
-	sl := lldars.NewDeliveryObject(net.ParseIP(ip).To4(), ServicePort)
-	msg := sl.Marshal()
-	conn.Write(msg)
-	log.Printf("Send Object > %s : %s\n", conn.RemoteAddr().String(), rl.Payload)
+	for i := 0; i < 3; i++ {
+		plen := len(lldars.DeliveryObjectPayload)
+		sl := lldars.NewDeliveryObject(net.ParseIP(ip).To4(), ServicePort, uint64(plen))
+		msg := sl.Marshal()
+		conn.Write(msg)
+		log.Printf("Send Object > %s : %s\n", conn.RemoteAddr().String(), rl.Payload)
+	}
 }
 
 func listenDiscoverBroadcast(ctx context.Context, listenAddr string, origin string) error {

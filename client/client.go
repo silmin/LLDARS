@@ -55,11 +55,13 @@ func (c *Client) getObjects(addr string) {
 	msg := sl.Marshal()
 	conn.Write(msg)
 
-	buf := make([]byte, 1000)
-	length, err := conn.Read(buf)
-	Error(err)
-	rl := lldars.Unmarshal(buf[:length])
-	log.Printf("Recieve from: %v\tmsg: %s\tlen: %d\n", rl.Origin, rl.Payload, length)
+	for i := 0; i < 3; i++ {
+		buf := make([]byte, lldars.LLDARSLayerSize)
+		length, err := conn.Read(buf)
+		Error(err)
+		rl := lldars.Unmarshal(buf[:length])
+		log.Printf("Recieve from: %v\tlength: %d\tmsg: %s\n", rl.Origin, rl.Length, rl.Payload)
+	}
 	log.Println("End getObjects()")
 	return
 }
