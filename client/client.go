@@ -60,7 +60,11 @@ func (c *Client) getObjects(addr string) {
 		length, err := conn.Read(buf)
 		Error(err)
 		rl := lldars.Unmarshal(buf[:length])
-		log.Printf("Recieve from: %v\tlength: %d\tmsg: %s\n", rl.Origin, rl.Length, rl.Payload)
+		log.Printf("Recieve from: %v\tlength: %d\n", rl.Origin, rl.Length)
+		buf = make([]byte, rl.Length)
+		length, err = conn.Read(buf)
+		Error(err)
+		log.Printf("Read msg: %s\n", buf[:length])
 	}
 	log.Println("End getObjects()")
 	return
