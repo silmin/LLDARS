@@ -21,6 +21,7 @@ const (
 	ServicePortNotify
 	GetObjectRequest
 	DeliveryObject
+	EndDeliveryObject
 )
 
 const (
@@ -33,24 +34,24 @@ const (
 
 func NewDiscoverBroadcast(origin net.IP, sp uint16) LLDARSLayer {
 	length := uint64(len(DiscoverBroadcastPayload))
-	return NewLLDARSPacket(origin, sp, length, DiscoverBroadcast, DiscoverBroadcastPayload)
+	return NewLLDARSPacket(origin, sp, length, DiscoverBroadcast, []byte(DiscoverBroadcastPayload))
 }
 
 func NewServerPortNotify(origin net.IP, sp uint16) LLDARSLayer {
 	length := uint64(len(DiscoverBroadcastPayload))
-	return NewLLDARSPacket(origin, sp, length, ServicePortNotify, ServicePortNotifyPayload)
+	return NewLLDARSPacket(origin, sp, length, ServicePortNotify, []byte(ServicePortNotifyPayload))
 }
 
 func NewGetObjectRequest(origin net.IP, sp uint16) LLDARSLayer {
 	length := uint64(len(DiscoverBroadcastPayload))
-	return NewLLDARSPacket(origin, sp, length, GetObjectRequest, GetObjectRequestPayload)
+	return NewLLDARSPacket(origin, sp, length, GetObjectRequest, []byte(GetObjectRequestPayload))
 }
 
-func NewDeliveryObject(origin net.IP, sp uint16, l uint64) LLDARSLayer {
-	return NewLLDARSPacket(origin, sp, l, DeliveryObject, DeliveryObjectPayload)
+func NewDeliveryObject(origin net.IP, sp uint16, l uint64, obj []byte) LLDARSLayer {
+	return NewLLDARSPacket(origin, sp, l, DeliveryObject, obj)
 }
 
-func NewLLDARSPacket(origin net.IP, sp uint16, l uint64, t LLDARSLayerType, p string) LLDARSLayer {
+func NewLLDARSPacket(origin net.IP, sp uint16, l uint64, t LLDARSLayerType, p []byte) LLDARSLayer {
 	return LLDARSLayer{
 		Type:        t,
 		Origin:      origin,

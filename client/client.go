@@ -3,6 +3,7 @@ package client
 import (
 	"context"
 	"fmt"
+	"io/ioutil"
 	"log"
 	"net"
 	"strconv"
@@ -55,17 +56,29 @@ func (c *Client) getObjects(addr string) {
 	msg := sl.Marshal()
 	conn.Write(msg)
 
-	for i := 0; i < 3; i++ {
+	fc := 0
+
+	for {
+		filename := fmt.Sprintf("./receive_data/%d.zip", fc)
 		buf := make([]byte, lldars.LLDARSLayerSize)
 		length, err := conn.Read(buf)
 		Error(err)
 		rl := lldars.Unmarshal(buf[:length])
 		log.Printf("Recieve from: %v\tlength: %d\n", rl.Origin, rl.Length)
+		if rl.Type == lldars.EndDeliveryObject {
+			break
+		}
 		buf = make([]byte, rl.Length)
 		length, err = conn.Read(buf)
 		Error(err)
-		log.Printf("Read msg: %s\n", buf[:length])
+
+		obj := buf[:length]
+		err = ioutil.WriteFile(filename, obj, 0644)
+		Error(err)
+		fc++
+		log.Printf("Read Object > %s", filename)
 	}
+
 	log.Println("End getObjects()")
 	return
 }

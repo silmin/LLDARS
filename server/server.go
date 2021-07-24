@@ -3,8 +3,10 @@ package server
 import (
 	"context"
 	"fmt"
+	"io/ioutil"
 	"log"
 	"net"
+	"path/filepath"
 
 	"github.com/silmin/lldars/pkg/lldars"
 )
@@ -13,6 +15,7 @@ const (
 	IntervalSeconds = 1
 	TimeoutSeconds  = 10
 	ServicePort     = 60001
+	ObjectPath      = "./data/"
 )
 
 func Server(listenAddr string, origin string) error {
@@ -50,14 +53,24 @@ func handleService(conn net.Conn) {
 }
 
 func sendObjects(conn net.Conn, rl lldars.LLDARSLayer) {
+	paths := getObjectPaths(ObjectPath)
 	ip, _ := lldars.ParseIpPort(conn.LocalAddr().String())
-	for i := 0; i < 3; i++ {
-		plen := len(lldars.DeliveryObjectPayload)
-		sl := lldars.NewDeliveryObject(net.ParseIP(ip).To4(), ServicePort, uint64(plen))
+	for _, path := range paths {
+		obj, err := ioutil.ReadFile(path)
+		Error(err)
+		plen := uint64(len(obj))
+		sl := lldars.NewDeliveryObject(net.ParseIP(ip).To4(), ServicePort, plen, obj)
 		msg := sl.Marshal()
 		conn.Write(msg)
 		log.Printf("Send Object > %s : %s\n", conn.RemoteAddr().String(), rl.Payload)
 	}
+}
+
+func getObjectPaths(path string) []string {
+	pat := path + "*.zip"
+	files, err := filepath.Glob(pat)
+	Error(err)
+	return files
 }
 
 func listenDiscoverBroadcast(ctx context.Context, listenAddr string, origin string) error {
