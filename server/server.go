@@ -15,7 +15,7 @@ const (
 	IntervalSeconds = 1
 	TimeoutSeconds  = 10
 	ServicePort     = 60001
-	SendObjectPath  = "../send_data/"
+	SendObjectPath  = "./send_data/"
 )
 
 func Server(listenAddr string, origin string) error {
@@ -39,6 +39,7 @@ func listenService() {
 }
 
 func handleService(conn net.Conn) {
+	defer conn.Close()
 	//buf := make([]byte, lldars.LLDARSLayerSize)
 	buf := make([]byte, 1000)
 	l, err := conn.Read(buf)
@@ -54,16 +55,22 @@ func handleService(conn net.Conn) {
 
 func sendObjects(conn net.Conn, rl lldars.LLDARSLayer) {
 	paths := getObjectPaths(SendObjectPath)
-	ip, _ := lldars.ParseIpPort(conn.LocalAddr().String())
+	ipstr, _ := lldars.ParseIpPort(conn.LocalAddr().String())
+	ip := net.ParseIP(ipstr).To4()
 	for _, path := range paths {
 		obj, err := ioutil.ReadFile(path)
 		Error(err)
 		plen := uint64(len(obj))
-		sl := lldars.NewDeliveryObject(net.ParseIP(ip).To4(), ServicePort, plen, obj)
+		sl := lldars.NewDeliveryObject(ip, ServicePort, plen, obj)
 		msg := sl.Marshal()
 		conn.Write(msg)
-		log.Printf("Send Object > %s : %s\n", conn.RemoteAddr().String(), rl.Payload)
+		log.Printf("Send Object > %s len: %d\n", conn.RemoteAddr().String(), sl.Length)
 	}
+
+	sl := lldars.NewEndDelivery(ip, ServicePort)
+	msg := sl.Marshal()
+	conn.Write(msg)
+	return
 }
 
 func getObjectPaths(path string) []string {

@@ -21,7 +21,7 @@ const (
 	ServicePortNotify
 	GetObjectRequest
 	DeliveryObject
-	EndDeliveryObject
+	EndDelivery
 )
 
 const (
@@ -30,25 +30,31 @@ const (
 	ServicePortNotifyPayload = "--NotifyServerPortPayload--"
 	GetObjectRequestPayload  = "--GetObjectRequestPayload--"
 	DeliveryObjectPayload    = "--DeliveryObjectPayload--"
+	EndDeliveryPayload       = "--EndDelivery--"
 )
 
 func NewDiscoverBroadcast(origin net.IP, sp uint16) LLDARSLayer {
-	length := uint64(len(DiscoverBroadcastPayload))
-	return NewLLDARSPacket(origin, sp, length, DiscoverBroadcast, []byte(DiscoverBroadcastPayload))
+	l := uint64(len(DiscoverBroadcastPayload))
+	return NewLLDARSPacket(origin, sp, l, DiscoverBroadcast, []byte(DiscoverBroadcastPayload))
 }
 
 func NewServerPortNotify(origin net.IP, sp uint16) LLDARSLayer {
-	length := uint64(len(DiscoverBroadcastPayload))
-	return NewLLDARSPacket(origin, sp, length, ServicePortNotify, []byte(ServicePortNotifyPayload))
+	l := uint64(len(DiscoverBroadcastPayload))
+	return NewLLDARSPacket(origin, sp, l, ServicePortNotify, []byte(ServicePortNotifyPayload))
 }
 
 func NewGetObjectRequest(origin net.IP, sp uint16) LLDARSLayer {
-	length := uint64(len(DiscoverBroadcastPayload))
-	return NewLLDARSPacket(origin, sp, length, GetObjectRequest, []byte(GetObjectRequestPayload))
+	l := uint64(len(DiscoverBroadcastPayload))
+	return NewLLDARSPacket(origin, sp, l, GetObjectRequest, []byte(GetObjectRequestPayload))
 }
 
 func NewDeliveryObject(origin net.IP, sp uint16, l uint64, obj []byte) LLDARSLayer {
 	return NewLLDARSPacket(origin, sp, l, DeliveryObject, obj)
+}
+
+func NewEndDelivery(origin net.IP, sp uint16) LLDARSLayer {
+	l := uint64(len(DiscoverBroadcastPayload))
+	return NewLLDARSPacket(origin, sp, l, DeliveryObject, []byte(EndDeliveryPayload))
 }
 
 func NewLLDARSPacket(origin net.IP, sp uint16, l uint64, t LLDARSLayerType, p []byte) LLDARSLayer {

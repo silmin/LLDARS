@@ -16,7 +16,7 @@ const (
 	IntervalSeconds   = 1
 	TimeoutSeconds    = 10
 	BroadcastAddr     = "192.168.100.255:60000"
-	ReceiveObjectPath = "../receive_data/"
+	ReceiveObjectPath = "./receive_data/"
 )
 
 type Client struct {
@@ -60,24 +60,38 @@ func (c *Client) getObjects(addr string) {
 	fc := 0
 
 	for {
+		// receive header
 		filename := ReceiveObjectPath + fmt.Sprintf("%d.zip", fc)
+
 		buf := make([]byte, lldars.LLDARSLayerSize)
 		length, err := conn.Read(buf)
 		Error(err)
 		rl := lldars.Unmarshal(buf[:length])
-		log.Printf("Recieve from: %v\tlength: %d\n", rl.Origin, rl.Length)
-		if rl.Type == lldars.EndDeliveryObject {
+		log.Printf("Recieve from: %v\tpayload-len: %d\n", rl.Origin, rl.Length)
+		if rl.Type == lldars.EndDelivery {
 			break
 		}
-		buf = make([]byte, rl.Length)
-		length, err = conn.Read(buf)
-		Error(err)
 
-		obj := buf[:length]
+		// receive object
+		var obj []byte
+		receivedBytes := 0
+		for {
+			bufSize := rl.Length - uint64(receivedBytes)
+			if bufSize <= 0 {
+				break
+			}
+			buf = make([]byte, bufSize)
+			length, err = conn.Read(buf)
+			Error(err)
+			receivedBytes += length
+			obj = append(obj, buf[:length]...)
+			log.Printf("Read Parts %d (%d/%d)\n", length, len(obj), rl.Length)
+		}
+
 		err = ioutil.WriteFile(filename, obj, 0644)
 		Error(err)
 		fc++
-		log.Printf("Read Object > %s", filename)
+		log.Printf("Read Object > %s, len: %d\n", filename, length)
 	}
 
 	log.Println("End getObjects()")
