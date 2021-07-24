@@ -53,7 +53,7 @@ func handleService(conn net.Conn) {
 }
 
 func sendObjects(conn net.Conn, rl lldars.LLDARSLayer) {
-	paths := getObjectPaths(ObjectPath)
+	paths := getObjectPaths(SendObjectPath)
 	ip, _ := lldars.ParseIpPort(conn.LocalAddr().String())
 	for _, path := range paths {
 		obj, err := ioutil.ReadFile(path)
