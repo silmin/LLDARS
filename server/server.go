@@ -45,22 +45,22 @@ func Server(ctx context.Context, bcAddr string, origin string, mode lldars.LLDAR
 	defer bcClose()
 
 	go listenDiscoverBroadcast(bcCtx, serverId, bcAddr, origin)
-	listenService()
+	listenService(serverId)
 
 	return
 }
 
-func listenService() {
+func listenService(serverId uuid.UUID) {
 	ln, err := net.Listen("tcp", fmt.Sprintf(":%d", ServicePort))
 	Error(err)
 	for {
 		conn, err := ln.Accept()
 		Error(err)
-		go handleService(conn)
+		go handleService(conn, serverId)
 	}
 }
 
-func handleService(conn net.Conn) {
+func handleService(conn net.Conn, serverId uuid.UUID) {
 	defer conn.Close()
 	buf := make([]byte, lldars.LLDARSLayerSize)
 	l, err := conn.Read(buf)

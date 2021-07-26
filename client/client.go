@@ -9,6 +9,7 @@ import (
 	"strconv"
 	"time"
 
+	"github.com/google/uuid"
 	"github.com/silmin/lldars/pkg/lldars"
 )
 
@@ -19,10 +20,14 @@ const (
 	ReceiveObjectPath = "./receive_data/"
 )
 
-type Client struct{}
+type Client struct {
+	uuid uuid.UUID
+}
 
 func NewClient() *Client {
-	return &Client{}
+	return &Client{
+		uuid: uuid.New(),
+	}
 }
 
 func (c *Client) DoAct() {
@@ -47,7 +52,7 @@ func (c *Client) getObjects(addr string) {
 
 	ip, _ := lldars.ParseIpPort(conn.LocalAddr().String())
 	log.Printf("conn.LocalAddr: %s", conn.LocalAddr().String())
-	sl := lldars.NewGetObjectRequest(net.ParseIP(ip).To4(), 0)
+	sl := lldars.NewGetObjectRequest(c.uuid, net.ParseIP(ip).To4(), 0)
 	msg := sl.Marshal()
 	conn.Write(msg)
 
@@ -121,7 +126,7 @@ func (c *Client) discoverBroadcast(ctx context.Context, servicePort chan<- strin
 	addr, port := lldars.ParseIpPort(udpLn.LocalAddr().String())
 	Error(err)
 	p, _ := strconv.Atoi(port)
-	l := lldars.NewDiscoverBroadcast(net.ParseIP(addr).To4(), uint16(p))
+	l := lldars.NewDiscoverBroadcast(c.uuid, net.ParseIP(addr).To4(), uint16(p))
 	msg := l.Marshal()
 	for {
 		select {
