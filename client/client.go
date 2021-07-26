@@ -20,8 +20,6 @@ const (
 )
 
 type Client struct {
-	fromAddr   string
-	toAddr     string
 	bufferSize int
 }
 
@@ -34,15 +32,15 @@ func NewClient(buf int) *Client {
 func (c *Client) DoAct() {
 	ctx, close := context.WithTimeout(context.Background(), time.Duration(TimeoutSeconds)*time.Second)
 	defer close()
+
 	serviceAddr := make(chan string)
-	go c.Broadcast(ctx, serviceAddr)
+	go c.discoverBroadcast(ctx, serviceAddr)
 
 	addr := <-serviceAddr
 	log.Printf("service addr: %s\n", addr)
 	close() // close broadcast
 
 	c.getObjects(addr)
-
 	return
 }
 
@@ -57,22 +55,25 @@ func (c *Client) getObjects(addr string) {
 	msg := sl.Marshal()
 	conn.Write(msg)
 
-	fc := 0
+	objCnt := 0
 
+	// receive objects
 	for {
-		// receive header
-		filename := ReceiveObjectPath + fmt.Sprintf("%d.zip", fc)
+		filename := ReceiveObjectPath + fmt.Sprintf("%d.zip", objCnt)
 
+		// header
 		buf := make([]byte, lldars.LLDARSLayerSize)
-		length, err := conn.Read(buf)
+		l, err := conn.Read(buf)
 		Error(err)
-		rl := lldars.Unmarshal(buf[:length])
+		rl := lldars.Unmarshal(buf[:l])
 		log.Printf("Recieve from: %v\tpayload-len: %d\n", rl.Origin, rl.Length)
-		if rl.Type == lldars.EndDelivery {
+		if rl.Type == lldars.EndOfDelivery {
 			break
+		} else if rl.Type != lldars.DeliveryObject {
+			continue
 		}
 
-		// receive object
+		// object
 		var obj []byte
 		receivedBytes := 0
 		for {
@@ -81,24 +82,26 @@ func (c *Client) getObjects(addr string) {
 				break
 			}
 			buf = make([]byte, bufSize)
-			length, err = conn.Read(buf)
+			l, err = conn.Read(buf)
 			Error(err)
-			receivedBytes += length
-			obj = append(obj, buf[:length]...)
-			log.Printf("Read Parts %d (%d/%d)\n", length, len(obj), rl.Length)
+			receivedBytes += l
+			obj = append(obj, buf[:l]...)
+			log.Printf("Read Parts %d (%d/%d)\n", l, len(obj), rl.Length)
 		}
 
-		err = ioutil.WriteFile(filename, obj, 0644)
-		Error(err)
-		fc++
-		log.Printf("Read Object > %s, len: %d\n", filename, length)
+		if len(obj) != 0 {
+			err = ioutil.WriteFile(filename, obj, 0644)
+			Error(err)
+			objCnt++
+			log.Printf("Read Object > %s, len: %d\n", filename, l)
+		}
 	}
 
 	log.Println("End getObjects()")
 	return
 }
 
-func (c *Client) Broadcast(ctx context.Context, servicePort chan<- string) {
+func (c *Client) discoverBroadcast(ctx context.Context, servicePort chan<- string) {
 	conn, err := net.Dial("udp", BroadcastAddr)
 	Error(err)
 	defer conn.Close()

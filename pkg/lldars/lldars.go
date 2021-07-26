@@ -21,16 +21,21 @@ const (
 	ServicePortNotify
 	GetObjectRequest
 	DeliveryObject
-	EndDelivery
+	EndOfDelivery
+	SyncObjectRequest
+	AcceptSyncingObject
+	EndOfSync
 )
 
 const (
-	LLDARSLayerSize          = 1 + 4 + 2 + 16
-	DiscoverBroadcastPayload = "Is available LLDARS server on this network ?"
-	ServicePortNotifyPayload = "--NotifyServerPortPayload--"
-	GetObjectRequestPayload  = "--GetObjectRequestPayload--"
-	DeliveryObjectPayload    = "--DeliveryObjectPayload--"
-	EndDeliveryPayload       = "--EndDelivery--"
+	LLDARSLayerSize            = 1 + 4 + 2 + 16
+	DiscoverBroadcastPayload   = "Is available LLDARS server on this network ?"
+	ServicePortNotifyPayload   = "--NotifyServerPortPayload--"
+	GetObjectRequestPayload    = "--GetObjectRequestPayload--"
+	DeliveryObjectPayload      = "--DeliveryObjectPayload--"
+	EndOfDeliveryPayload       = "--EndOfDelivery--"
+	AcceptSyncingObjectPayload = "--AcceptSyncingObjectPayload--"
+	EndOfSyncPayload           = "--EndOfSyncPayload--"
 )
 
 func NewDiscoverBroadcast(origin net.IP, sp uint16) LLDARSLayer {
@@ -39,22 +44,33 @@ func NewDiscoverBroadcast(origin net.IP, sp uint16) LLDARSLayer {
 }
 
 func NewServerPortNotify(origin net.IP, sp uint16) LLDARSLayer {
-	l := uint64(len(DiscoverBroadcastPayload))
+	l := uint64(len(ServicePortNotifyPayload))
 	return NewLLDARSPacket(origin, sp, l, ServicePortNotify, []byte(ServicePortNotifyPayload))
 }
 
 func NewGetObjectRequest(origin net.IP, sp uint16) LLDARSLayer {
-	l := uint64(len(DiscoverBroadcastPayload))
+	l := uint64(len(GetObjectRequestPayload))
 	return NewLLDARSPacket(origin, sp, l, GetObjectRequest, []byte(GetObjectRequestPayload))
 }
 
-func NewDeliveryObject(origin net.IP, sp uint16, l uint64, obj []byte) LLDARSLayer {
+func NewDeliveryObject(origin net.IP, sp uint16, obj []byte) LLDARSLayer {
+	l := uint64(len(obj))
 	return NewLLDARSPacket(origin, sp, l, DeliveryObject, obj)
 }
 
-func NewEndDelivery(origin net.IP, sp uint16) LLDARSLayer {
-	l := uint64(len(DiscoverBroadcastPayload))
-	return NewLLDARSPacket(origin, sp, l, EndDelivery, []byte(EndDeliveryPayload))
+func NewEndOfDelivery(origin net.IP, sp uint16) LLDARSLayer {
+	l := uint64(len(EndOfDeliveryPayload))
+	return NewLLDARSPacket(origin, sp, l, EndOfDelivery, []byte(EndOfDeliveryPayload))
+}
+
+func NewAcceptSyncingObject(origin net.IP, sp uint16) LLDARSLayer {
+	l := uint64(len(AcceptSyncingObjectPayload))
+	return NewLLDARSPacket(origin, sp, l, AcceptSyncingObject, []byte(AcceptSyncingObjectPayload))
+}
+
+func NewEndOfSync(origin net.IP, sp uint16) LLDARSLayer {
+	l := uint64(len(EndOfSyncPayload))
+	return NewLLDARSPacket(origin, sp, l, EndOfSync, []byte(EndOfSyncPayload))
 }
 
 func NewLLDARSPacket(origin net.IP, sp uint16, l uint64, t LLDARSLayerType, p []byte) LLDARSLayer {
