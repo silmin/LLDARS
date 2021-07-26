@@ -6,9 +6,10 @@ import (
 
 func main() {
 	// Client
-	c := client.NewClient(1000)
+	c := client.NewClient()
 	c.DoAct()
 
 	// Server
-	//server.Server("192.168.100.255:60000", "192.168.100.2")
+	// ctx, close := context.WithTimeout(context.Background(), time.Duration(TimeoutSeconds)*time.Second)
+	// server.Server(ctx, "192.168.100.255:60000", "192.168.100.2", lldars.NormalMode)
 }

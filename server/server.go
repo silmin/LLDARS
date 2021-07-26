@@ -3,11 +3,11 @@ package server
 import (
 	"context"
 	"fmt"
-	"io/ioutil"
 	"log"
 	"net"
-	"path/filepath"
+	"time"
 
+	"github.com/google/uuid"
 	"github.com/silmin/lldars/pkg/lldars"
 )
 
@@ -19,11 +19,32 @@ const (
 	SyncObjectPath  = "./sync_data/"
 )
 
-func Server(bcAddr string, origin string) {
-	bcCtx, bcClose := context.WithCancel(context.Background())
+func Server(ctx context.Context, bcAddr string, origin string, mode lldars.LLDARSServeMode) {
+
+	serverId := uuid.New()
+
+	if mode == lldars.RevivalMode {
+		revCtx, revClose := context.WithTimeout(ctx, time.Duration(TimeoutSeconds)*time.Second)
+		defer revClose()
+
+		serviceAddrChan := make(chan string)
+		go discoverBroadcast(revCtx, serverId, serviceAddrChan)
+
+		for {
+			select {
+			case addr := <-serviceAddrChan:
+				log.Printf("service addr: %s\n", addr)
+				// sync
+			case <-revCtx.Done():
+				revClose()
+				break
+			}
+		}
+	}
+	bcCtx, bcClose := context.WithCancel(ctx)
 	defer bcClose()
 
-	go listenDiscoverBroadcast(bcCtx, bcAddr, origin)
+	go listenDiscoverBroadcast(bcCtx, serverId, bcAddr, origin)
 	listenService()
 
 	return
@@ -53,97 +74,18 @@ func handleService(conn net.Conn) {
 		_, err := conn.Read(buf)
 		Error(err)
 
-		sendObjects(conn)
-	}
-	if rl.Type == lldars.SyncObjectRequest {
+		sendObjects(conn, serverId)
+	} else if rl.Type == lldars.SyncObjectRequest {
 		buf := make([]byte, rl.Length)
-		l, err := conn.Read(buf)
+		_, err := conn.Read(buf)
 		Error(err)
 
-		srvName := string(buf[:l])
-		acceptSyncingObjects(conn, rl, srvName)
+		receiveSyncObjects(conn, rl, serverId)
 	}
 	return
 }
 
-func sendObjects(conn net.Conn) {
-	defer conn.Close()
-
-	paths := getObjectPaths(SendObjectPath)
-	for _, path := range paths {
-		obj, err := ioutil.ReadFile(path)
-		Error(err)
-		sl := lldars.NewDeliveryObject(localIP(conn), ServicePort, obj)
-		msg := sl.Marshal()
-		conn.Write(msg)
-		log.Printf("Send Object > %s len: %d\n", conn.RemoteAddr().String(), sl.Length)
-	}
-
-	sl := lldars.NewEndOfDelivery(localIP(conn), ServicePort)
-	msg := sl.Marshal()
-	conn.Write(msg)
-	return
-}
-
-func acceptSyncingObjects(conn net.Conn, rl lldars.LLDARSLayer, srvName string) {
-	defer conn.Close()
-
-	// ack
-	sl := lldars.NewAcceptSyncingObject(localIP(conn), ServicePort)
-	msg := sl.Marshal()
-	conn.Write(msg)
-
-	path := SyncObjectPath + srvName + "/"
-	objCnt := 0
-
-	for {
-		filename := path + fmt.Sprintf("%d.zip", objCnt)
-
-		// header
-		buf := make([]byte, lldars.LLDARSLayerSize)
-		l, err := conn.Read(buf)
-		Error(err)
-		rl := lldars.Unmarshal(buf[:l])
-		log.Printf("~ Recieve from: %v\tpayload-len: %d\n", rl.Origin, rl.Length)
-		if rl.Type == lldars.EndOfDelivery {
-			break
-		} else if rl.Type != lldars.AcceptSyncingObject {
-			continue
-		}
-
-		// object
-		var obj []byte
-		receivedBytes := 0
-		for {
-			bufSize := rl.Length - uint64(receivedBytes)
-			if bufSize <= 0 {
-				break
-			}
-			buf = make([]byte, bufSize)
-			l, err = conn.Read(buf)
-			Error(err)
-			receivedBytes += l
-			obj = append(obj, buf[:l]...)
-			log.Printf("~ Read Parts %d (%d/%d)\n", l, len(obj), rl.Length)
-		}
-
-		if len(obj) != 0 {
-			err = ioutil.WriteFile(filename, obj, 0644)
-			Error(err)
-			objCnt++
-			log.Printf("Accept Object > %s, len: %d\n", filename, l)
-		}
-	}
-}
-
-func getObjectPaths(path string) []string {
-	pat := path + "*.zip"
-	files, err := filepath.Glob(pat)
-	Error(err)
-	return files
-}
-
-func listenDiscoverBroadcast(ctx context.Context, listenAddr string, origin string) error {
+func listenDiscoverBroadcast(ctx context.Context, serverId uuid.UUID, listenAddr string, origin string) {
 	udpAddr, err := net.ResolveUDPAddr("udp", listenAddr)
 	Error(err)
 	udpLn, err := net.ListenUDP("udp", udpAddr)
@@ -157,13 +99,20 @@ func listenDiscoverBroadcast(ctx context.Context, listenAddr string, origin stri
 		Error(err)
 		msg := buf[:length]
 		rl := lldars.Unmarshal(msg)
-		log.Printf("Receive from: %v\tmsg: %s\n", rl.Origin, rl.Payload)
+		log.Printf("Receive BC from: %v\n", rl.Origin)
 
-		sl := lldars.NewServerPortNotify(net.ParseIP(origin), ServicePort)
-		ipp := rl.Origin.String() + ":" + fmt.Sprintf("%d", rl.ServicePort)
-		ackAddr, err := net.ResolveUDPAddr("udp", ipp)
-		udpLn.WriteToUDP([]byte(sl.Marshal()), ackAddr)
-		log.Printf("Ack to: %v\tmsg: %s\n", ackAddr.IP.String(), sl.Payload)
+		buf = make([]byte, rl.Length)
+		_, err = udpLn.Read(buf)
+		Error(err)
+
+		if rl.Type == lldars.DiscoverBroadcast {
+			sl := lldars.NewServerPortNotify(serverId, net.ParseIP(origin), ServicePort)
+			ipp := fmt.Sprintf("%s:%d", rl.Origin.String(), rl.ServicePort)
+			ackAddr, err := net.ResolveUDPAddr("udp", ipp)
+			Error(err)
+			udpLn.WriteToUDP([]byte(sl.Marshal()), ackAddr)
+			log.Printf("Ack to: %v\tmsg: %s\n", ackAddr.IP.String(), sl.Payload)
+		}
 	}
 }
 

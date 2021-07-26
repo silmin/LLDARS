@@ -19,14 +19,10 @@ const (
 	ReceiveObjectPath = "./receive_data/"
 )
 
-type Client struct {
-	bufferSize int
-}
+type Client struct{}
 
-func NewClient(buf int) *Client {
-	return &Client{
-		bufferSize: buf,
-	}
+func NewClient() *Client {
+	return &Client{}
 }
 
 func (c *Client) DoAct() {
@@ -140,18 +136,23 @@ func (c *Client) discoverBroadcast(ctx context.Context, servicePort chan<- strin
 	}
 }
 
-func (c *Client) listenAck(ctx context.Context, udpLn *net.UDPConn, nextAddrChan chan<- string) {
+func (c *Client) listenAck(ctx context.Context, udpLn *net.UDPConn, servicePort chan<- string) {
 	log.Println("Start listenAck()")
 
-	buf := make([]byte, c.bufferSize)
-	length, err := udpLn.Read(buf)
+	buf := make([]byte, lldars.LLDARSLayerSize)
+	l, err := udpLn.Read(buf)
 	Error(err)
-	msg := string(buf[:length])
-
+	msg := string(buf[:l])
 	rl := lldars.Unmarshal([]byte(msg))
-	log.Printf("Recieve from: %v\tmsg: %s\n", rl.Origin, rl.Payload)
 
-	nextAddrChan <- rl.Origin.String() + ":" + fmt.Sprintf("%d", rl.ServicePort)
+	buf = make([]byte, rl.Length)
+	l, err = udpLn.Read(buf)
+	Error(err)
+	msg = string(buf[:l])
+
+	log.Printf("Recieve from: %v\tmsg: %s\n", rl.Origin, msg)
+
+	servicePort <- fmt.Sprintf("%s:%d", rl.Origin.String(), rl.ServicePort)
 }
 
 func Error(_err error) {
