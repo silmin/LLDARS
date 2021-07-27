@@ -21,12 +21,12 @@ const (
 )
 
 type Client struct {
-	uuid uuid.UUID
+	uuid uint32
 }
 
 func NewClient() *Client {
 	return &Client{
-		uuid: uuid.New(),
+		uuid: uuid.New().ID(),
 	}
 }
 
@@ -68,8 +68,8 @@ func (c *Client) getObjects(addr string) {
 		Error(err)
 		rl := lldars.Unmarshal(buf[:l])
 		log.Printf("Recieve from: %v\tpayload-len: %d\n", rl.Origin, rl.Length)
+		log.Printf("serverId: %d\n", rl.ServerId)
 		if rl.Type == lldars.EndOfDelivery {
-			log.Printf("uuid: %s\n", rl.ServerId.String())
 			break
 		} else if rl.Type != lldars.DeliveryObject {
 			continue
@@ -103,7 +103,7 @@ func (c *Client) getObjects(addr string) {
 	return
 }
 
-func (c *Client) discoverBroadcast(ctx context.Context, servicePort chan<- string) {
+func (c *Client) discoverBroadcast(ctx context.Context, serviceAddr chan<- string) {
 	conn, err := net.Dial("udp", BroadcastAddr)
 	Error(err)
 	defer conn.Close()
@@ -122,7 +122,7 @@ func (c *Client) discoverBroadcast(ctx context.Context, servicePort chan<- strin
 
 	listenCtx, listenCancel := context.WithTimeout(ctx, time.Duration(TimeoutSeconds)*time.Second)
 	defer listenCancel()
-	go c.listenAck(listenCtx, udpLn, servicePort)
+	go c.listenAck(listenCtx, udpLn, serviceAddr)
 
 	addr, port := lldars.ParseIpPort(udpLn.LocalAddr().String())
 	Error(err)
@@ -142,7 +142,7 @@ func (c *Client) discoverBroadcast(ctx context.Context, servicePort chan<- strin
 	}
 }
 
-func (c *Client) listenAck(ctx context.Context, udpLn *net.UDPConn, servicePort chan<- string) {
+func (c *Client) listenAck(ctx context.Context, udpLn *net.UDPConn, serviceAddr chan<- string) {
 	log.Println("Start listenAck()")
 
 	buf := make([]byte, lldars.LLDARSLayerSize)
@@ -158,7 +158,7 @@ func (c *Client) listenAck(ctx context.Context, udpLn *net.UDPConn, servicePort 
 
 	log.Printf("Recieve from: %v\tmsg: %s\n", rl.Origin, msg)
 
-	servicePort <- fmt.Sprintf("%s:%d", rl.Origin.String(), rl.ServicePort)
+	serviceAddr <- fmt.Sprintf("%s:%d", rl.Origin.String(), rl.ServicePort)
 }
 
 func Error(_err error) {

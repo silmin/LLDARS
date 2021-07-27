@@ -6,12 +6,12 @@ import (
 	"net"
 	"path/filepath"
 
-	"github.com/google/uuid"
 	"github.com/silmin/lldars/pkg/lldars"
 )
 
-func sendObjects(conn net.Conn, serverId uuid.UUID) {
+func sendObjects(conn net.Conn, serverId uint32) {
 	defer conn.Close()
+	log.Printf("serverId: %d", serverId)
 
 	paths := getObjectPaths(SendObjectPath)
 	for _, path := range paths {
@@ -23,7 +23,6 @@ func sendObjects(conn net.Conn, serverId uuid.UUID) {
 		log.Printf("Send Object > %s len: %d\n", conn.RemoteAddr().String(), sl.Length)
 	}
 
-	log.Printf("serverId: %s", serverId.String())
 	sl := lldars.NewEndOfDelivery(serverId, localIP(conn), ServicePort)
 	msg := sl.Marshal()
 	conn.Write(msg)
@@ -31,7 +30,7 @@ func sendObjects(conn net.Conn, serverId uuid.UUID) {
 }
 
 func getObjectPaths(path string) []string {
-	pat := path + "*.zip"
+	pat := path + "/*.zip"
 	files, err := filepath.Glob(pat)
 	Error(err)
 	return files

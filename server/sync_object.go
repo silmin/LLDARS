@@ -6,18 +6,17 @@ import (
 	"log"
 	"net"
 
-	"github.com/google/uuid"
 	"github.com/silmin/lldars/pkg/lldars"
 )
 
-func receiveSyncObjects(conn net.Conn, rl lldars.LLDARSLayer, serverId uuid.UUID) {
+func receiveSyncObjects(conn net.Conn, rl lldars.LLDARSLayer, serverId uint32) {
 	defer conn.Close()
 
 	sl := lldars.NewAcceptSyncingObject(serverId, localIP(conn), ServicePort)
 	msg := sl.Marshal()
 	conn.Write(msg)
 
-	path := SyncObjectPath + serverId.String() + "/"
+	path := fmt.Sprintf("%s/%d/", SyncObjectPath, serverId)
 	objCnt := 0
 
 	for {

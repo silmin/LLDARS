@@ -8,7 +8,6 @@ import (
 	"strconv"
 	"time"
 
-	"github.com/google/uuid"
 	"github.com/silmin/lldars/pkg/lldars"
 )
 
@@ -16,7 +15,7 @@ const (
 	BroadcastAddr = "192.168.100.255:60000"
 )
 
-func discoverBroadcast(ctx context.Context, serverId uuid.UUID, servicePortChan chan<- string) {
+func discoverBroadcast(ctx context.Context, serverId uint32, servicePortChan chan<- string) {
 	conn, err := net.Dial("udp", BroadcastAddr)
 	Error(err)
 	defer conn.Close()

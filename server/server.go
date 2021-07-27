@@ -15,13 +15,12 @@ const (
 	IntervalSeconds = 1
 	TimeoutSeconds  = 10
 	ServicePort     = 60001
-	SendObjectPath  = "./send_data/"
-	SyncObjectPath  = "./sync_data/"
+	SendObjectPath  = "./send_data"
+	SyncObjectPath  = "./sync_data"
 )
 
 func Server(ctx context.Context, bcAddr string, origin string, mode lldars.LLDARSServeMode) {
-
-	serverId := uuid.New()
+	serverId := uuid.New().ID()
 
 	if mode == lldars.RevivalMode {
 		revCtx, revClose := context.WithTimeout(ctx, time.Duration(TimeoutSeconds)*time.Second)
@@ -50,7 +49,7 @@ func Server(ctx context.Context, bcAddr string, origin string, mode lldars.LLDAR
 	return
 }
 
-func listenService(serverId uuid.UUID) {
+func listenService(serverId uint32) {
 	ln, err := net.Listen("tcp", fmt.Sprintf(":%d", ServicePort))
 	Error(err)
 	for {
@@ -60,7 +59,7 @@ func listenService(serverId uuid.UUID) {
 	}
 }
 
-func handleService(conn net.Conn, serverId uuid.UUID) {
+func handleService(conn net.Conn, serverId uint32) {
 	defer conn.Close()
 	buf := make([]byte, lldars.LLDARSLayerSize)
 	l, err := conn.Read(buf)
@@ -85,7 +84,7 @@ func handleService(conn net.Conn, serverId uuid.UUID) {
 	return
 }
 
-func listenDiscoverBroadcast(ctx context.Context, serverId uuid.UUID, listenAddr string, origin string) {
+func listenDiscoverBroadcast(ctx context.Context, serverId uint32, listenAddr string, origin string) {
 	udpAddr, err := net.ResolveUDPAddr("udp", listenAddr)
 	Error(err)
 	udpLn, err := net.ListenUDP("udp", udpAddr)
