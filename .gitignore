@@ -2,3 +2,4 @@
 /receive_data/
 lldars
 go.sum
+!pkg/lldars/

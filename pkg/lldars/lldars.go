@@ -18,12 +18,8 @@ type LLDARSLayer struct {
 	Payload     []byte
 }
 
+type LLDARSLayerType uint8
 type LLDARSServeMode uint8
-
-const (
-	NormalMode LLDARSServeMode = iota
-	RevivalMode
-)
 
 const (
 	LLDARSLayerSize            = 1 + 16 + 4 + 2 + 8
