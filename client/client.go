@@ -69,6 +69,7 @@ func (c *Client) getObjects(addr string) {
 		rl := lldars.Unmarshal(buf[:l])
 		log.Printf("Recieve from: %v\tpayload-len: %d\n", rl.Origin, rl.Length)
 		if rl.Type == lldars.EndOfDelivery {
+			log.Printf("uuid: %s\n", rl.ServerId.String())
 			break
 		} else if rl.Type != lldars.DeliveryObject {
 			continue
@@ -94,7 +95,7 @@ func (c *Client) getObjects(addr string) {
 			err = ioutil.WriteFile(filename, obj, 0644)
 			Error(err)
 			objCnt++
-			log.Printf("Read Object > %s, len: %d\n", filename, l)
+			log.Printf("Read Object > %s, len: %d\n", filename, rl.Length)
 		}
 	}
 

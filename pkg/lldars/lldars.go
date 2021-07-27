@@ -2,6 +2,7 @@ package lldars
 
 import (
 	"encoding/binary"
+	"log"
 	"net"
 	"strings"
 
@@ -16,20 +17,6 @@ type LLDARSLayer struct {
 	Length      uint64
 	Payload     []byte
 }
-
-type LLDARSLayerType uint8
-
-const (
-	DiscoverBroadcast LLDARSLayerType = iota
-	ServicePortNotify
-	GetObjectRequest
-	DeliveryObject
-	EndOfDelivery
-	BackupObjectRequest // backup要求 (あってもいいけど定期実行したいかも)
-	SyncObjectRequest   // backupのための同期要求
-	AcceptSyncingObject // 同期要求へのack
-	EndOfSync
-)
 
 type LLDARSServeMode uint8
 
@@ -98,6 +85,7 @@ func NewLLDARSPacket(id uuid.UUID, origin net.IP, sp uint16, l uint64, t LLDARSL
 func (l *LLDARSLayer) Marshal() []byte {
 	buf := make([]byte, LLDARSLayerSize)
 	buf[0] = byte(l.Type)
+	log.Printf("id len: %d\n", len(l.ServerId))
 	buf = append(buf, l.ServerId[:]...)
 	binary.BigEndian.PutUint32(buf[17:], ip2int(l.Origin))
 	binary.BigEndian.PutUint16(buf[21:], l.ServicePort)
@@ -109,7 +97,10 @@ func (l *LLDARSLayer) Marshal() []byte {
 func Unmarshal(buf []byte) LLDARSLayer {
 	var l LLDARSLayer
 	l.Type = LLDARSLayerType(buf[0])
-	id, _ := uuid.FromBytes(buf[1:])
+	id, err := uuid.FromBytes(buf[1:17])
+	if err != nil {
+		log.Panic(err)
+	}
 	l.ServerId = id
 	l.Origin = int2ip(binary.BigEndian.Uint32(buf[17:]))
 	l.ServicePort = binary.BigEndian.Uint16(buf[21:])

@@ -23,6 +23,7 @@ func sendObjects(conn net.Conn, serverId uuid.UUID) {
 		log.Printf("Send Object > %s len: %d\n", conn.RemoteAddr().String(), sl.Length)
 	}
 
+	log.Printf("serverId: %s", serverId.String())
 	sl := lldars.NewEndOfDelivery(serverId, localIP(conn), ServicePort)
 	msg := sl.Marshal()
 	conn.Write(msg)
