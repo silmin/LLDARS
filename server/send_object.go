@@ -13,7 +13,7 @@ func sendObjects(conn net.Conn, serverId uint32) {
 	defer conn.Close()
 	log.Printf("serverId: %d", serverId)
 
-	paths := getObjectPaths(SendObjectPath)
+	paths := getObjectPaths(LLDARSObjectPath)
 	for _, path := range paths {
 		obj, err := ioutil.ReadFile(path)
 		Error(err)

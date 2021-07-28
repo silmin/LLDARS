@@ -9,7 +9,6 @@ import (
 	"strconv"
 	"time"
 
-	"github.com/google/uuid"
 	"github.com/silmin/lldars/pkg/lldars"
 )
 
@@ -20,14 +19,10 @@ const (
 	ReceiveObjectPath = "./receive_data/"
 )
 
-type Client struct {
-	uuid uint32
-}
+type Client struct{}
 
 func NewClient() *Client {
-	return &Client{
-		uuid: uuid.New().ID(),
-	}
+	return &Client{}
 }
 
 func (c *Client) DoAct() {
@@ -52,15 +47,13 @@ func (c *Client) getObjects(addr string) {
 
 	ip, _ := lldars.ParseIpPort(conn.LocalAddr().String())
 	log.Printf("conn.LocalAddr: %s", conn.LocalAddr().String())
-	sl := lldars.NewGetObjectRequest(c.uuid, net.ParseIP(ip).To4(), 0)
+	sl := lldars.NewGetObjectRequest(0, net.ParseIP(ip).To4(), 0)
 	msg := sl.Marshal()
 	conn.Write(msg)
 
-	objCnt := 0
-
 	// receive objects
 	for {
-		filename := ReceiveObjectPath + fmt.Sprintf("%d.zip", objCnt)
+		filename := ReceiveObjectPath + genFilename()
 
 		// header
 		buf := make([]byte, lldars.LLDARSLayerSize)
@@ -94,7 +87,6 @@ func (c *Client) getObjects(addr string) {
 		if len(obj) != 0 {
 			err = ioutil.WriteFile(filename, obj, 0644)
 			Error(err)
-			objCnt++
 			log.Printf("Read Object > %s, len: %d\n", filename, rl.Length)
 		}
 	}
@@ -127,7 +119,7 @@ func (c *Client) discoverBroadcast(ctx context.Context, serviceAddr chan<- strin
 	addr, port := lldars.ParseIpPort(udpLn.LocalAddr().String())
 	Error(err)
 	p, _ := strconv.Atoi(port)
-	l := lldars.NewDiscoverBroadcast(c.uuid, net.ParseIP(addr).To4(), uint16(p))
+	l := lldars.NewDiscoverBroadcast(0, net.ParseIP(addr).To4(), uint16(p))
 	msg := l.Marshal()
 	for {
 		select {
@@ -145,20 +137,21 @@ func (c *Client) discoverBroadcast(ctx context.Context, serviceAddr chan<- strin
 func (c *Client) listenAck(ctx context.Context, udpLn *net.UDPConn, serviceAddr chan<- string) {
 	log.Println("Start listenAck()")
 
-	buf := make([]byte, lldars.LLDARSLayerSize)
+	buf := make([]byte, lldars.LLDARSLayerSize+len(lldars.ServicePortNotifyPayload))
 	l, err := udpLn.Read(buf)
 	Error(err)
 	msg := string(buf[:l])
 	rl := lldars.Unmarshal([]byte(msg))
+	log.Println(rl)
 
-	buf = make([]byte, rl.Length)
-	l, err = udpLn.Read(buf)
-	Error(err)
-	msg = string(buf[:l])
-
-	log.Printf("Recieve from: %v\tmsg: %s\n", rl.Origin, msg)
+	log.Printf("Recieve from: %v\tmsg: %s\n", rl.Origin, rl.Payload)
 
 	serviceAddr <- fmt.Sprintf("%s:%d", rl.Origin.String(), rl.ServicePort)
+}
+
+func genFilename() string {
+	t := time.Now()
+	return fmt.Sprintf("%s.zip", t.Format("20060102T150405.000"))
 }
 
 func Error(_err error) {

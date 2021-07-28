@@ -1,7 +1,6 @@
 package server
 
 import (
-	"fmt"
 	"io/ioutil"
 	"log"
 	"net"
@@ -9,27 +8,19 @@ import (
 	"github.com/silmin/lldars/pkg/lldars"
 )
 
-func receiveSyncObjects(conn net.Conn, rl lldars.LLDARSLayer, serverId uint32) {
-	defer conn.Close()
-
-	sl := lldars.NewAcceptSyncingObject(serverId, localIP(conn), ServicePort)
-	msg := sl.Marshal()
-	conn.Write(msg)
-
-	path := fmt.Sprintf("%s/%d/", SyncObjectPath, serverId)
-	objCnt := 0
-
+func receiveObjects(conn net.Conn, path string) {
 	for {
-		filename := path + fmt.Sprintf("%d.zip", objCnt)
+		filename := path + genFilename()
 
 		// header
 		buf := make([]byte, lldars.LLDARSLayerSize)
 		l, err := conn.Read(buf)
 		Error(err)
 		rl := lldars.Unmarshal(buf[:l])
-		log.Printf("~ Recieve from: %v\tpayload-len: %d\n", rl.Origin, rl.Length)
+		log.Printf("Recieve from: %v\tpayload-len: %d\n", rl.Origin, rl.Length)
+		log.Printf("from serverId: %d\n", rl.ServerId)
 		if rl.Type == lldars.EndOfDelivery {
-			break
+			return
 		} else if rl.Type != lldars.DeliveryObject {
 			continue
 		}
@@ -47,14 +38,13 @@ func receiveSyncObjects(conn net.Conn, rl lldars.LLDARSLayer, serverId uint32) {
 			Error(err)
 			receivedBytes += l
 			obj = append(obj, buf[:l]...)
-			log.Printf("~ Read Parts %d (%d/%d)\n", l, len(obj), rl.Length)
+			log.Printf("Read Parts %d (%d/%d)\n", l, len(obj), rl.Length)
 		}
 
 		if len(obj) != 0 {
 			err = ioutil.WriteFile(filename, obj, 0644)
 			Error(err)
-			objCnt++
-			log.Printf("Accept Object > %s, len: %d\n", filename, l)
+			log.Printf("Receive Object > %s, len: %d\n", filename, rl.Length)
 		}
 	}
 }

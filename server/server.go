@@ -5,40 +5,25 @@ import (
 	"fmt"
 	"log"
 	"net"
-	"time"
+	"os"
 
 	"github.com/google/uuid"
 	"github.com/silmin/lldars/pkg/lldars"
 )
 
 const (
-	IntervalSeconds = 1
-	TimeoutSeconds  = 10
-	ServicePort     = 60001
-	SendObjectPath  = "./send_data"
-	SyncObjectPath  = "./sync_data"
+	IntervalSeconds   = 1
+	TimeoutSeconds    = 10
+	ServicePort       = 60001
+	LLDARSObjectPath  = "./send_data"
+	BackupObjectsPath = "./backups"
 )
 
 func Server(ctx context.Context, bcAddr string, origin string, mode lldars.LLDARSServeMode) {
 	serverId := uuid.New().ID()
 
 	if mode == lldars.RevivalMode {
-		revCtx, revClose := context.WithTimeout(ctx, time.Duration(TimeoutSeconds)*time.Second)
-		defer revClose()
-
-		serviceAddrChan := make(chan string)
-		go discoverBroadcast(revCtx, serverId, serviceAddrChan)
-
-		for {
-			select {
-			case addr := <-serviceAddrChan:
-				log.Printf("service addr: %s\n", addr)
-				// sync
-			case <-revCtx.Done():
-				revClose()
-				break
-			}
-		}
+		sync(ctx, serverId)
 	}
 	bcCtx, bcClose := context.WithCancel(ctx)
 	defer bcClose()
@@ -79,7 +64,13 @@ func handleService(conn net.Conn, serverId uint32) {
 		_, err := conn.Read(buf)
 		Error(err)
 
-		receiveSyncObjects(conn, rl, serverId)
+		sendObjects(conn, serverId)
+	} else if rl.Type == lldars.BackupObjectRequest {
+		buf := make([]byte, rl.Length)
+		_, err := conn.Read(buf)
+		Error(err)
+
+		receiveBackupObjects(conn, rl, serverId)
 	}
 	return
 }
@@ -105,14 +96,26 @@ func listenDiscoverBroadcast(ctx context.Context, serverId uint32, listenAddr st
 		Error(err)
 
 		if rl.Type == lldars.DiscoverBroadcast {
-			sl := lldars.NewServerPortNotify(serverId, net.ParseIP(origin), ServicePort)
-			ipp := fmt.Sprintf("%s:%d", rl.Origin.String(), rl.ServicePort)
-			ackAddr, err := net.ResolveUDPAddr("udp", ipp)
-			Error(err)
-			udpLn.WriteToUDP([]byte(sl.Marshal()), ackAddr)
-			log.Printf("Ack to: %v\tmsg: %s\n", ackAddr.IP.String(), sl.Payload)
+			if (rl.ServerId == 0 || hasBackup(rl.ServerId)) && rl.Origin.String() == origin {
+				ackBroadcast(serverId, rl, udpLn, origin)
+			}
 		}
 	}
+}
+
+func ackBroadcast(serverId uint32, rl lldars.LLDARSLayer, udpLn *net.UDPConn, origin string) {
+	sl := lldars.NewServerPortNotify(serverId, net.ParseIP(origin), ServicePort)
+	ipp := fmt.Sprintf("%s:%d", rl.Origin.String(), rl.ServicePort)
+	ackAddr, err := net.ResolveUDPAddr("udp", ipp)
+	Error(err)
+	udpLn.WriteToUDP([]byte(sl.Marshal()), ackAddr)
+	log.Printf("Ack to: %v\tmsg: %s\n", ackAddr.IP.String(), sl.Payload)
+}
+
+func hasBackup(serverId uint32) bool {
+	path := fmt.Sprintf("%s/%d", BackupObjectsPath, serverId)
+	f, err := os.Stat(path)
+	return f.IsDir() && !os.IsNotExist(err)
 }
 
 func localIP(conn net.Conn) net.IP {

@@ -15,6 +15,42 @@ const (
 	BroadcastAddr = "192.168.100.255:60000"
 )
 
+func sync(ctx context.Context, serverId uint32) {
+	revCtx, revClose := context.WithTimeout(ctx, time.Duration(TimeoutSeconds)*time.Second)
+	defer revClose()
+
+	serviceAddrChan := make(chan string)
+	go discoverBroadcast(revCtx, serverId, serviceAddrChan)
+
+	for {
+		select {
+		case addr := <-serviceAddrChan:
+			log.Printf("service addr: %s\n", addr)
+			syncObjects(addr, serverId)
+		case <-revCtx.Done():
+			revClose()
+			break
+		}
+	}
+}
+
+func syncObjects(addr string, serverId uint32) {
+	conn, err := net.Dial("tcp", addr)
+	Error(err)
+	defer conn.Close()
+
+	ip, _ := lldars.ParseIpPort(conn.LocalAddr().String())
+	log.Printf("conn.LocalAddr: %s", conn.LocalAddr().String())
+	sl := lldars.NewSyncObjectRequest(0, net.ParseIP(ip).To4(), 0)
+	msg := sl.Marshal()
+	conn.Write(msg)
+
+	receiveObjects(conn, LLDARSObjectPath)
+
+	log.Println("End getObjects()")
+	return
+}
+
 func discoverBroadcast(ctx context.Context, serverId uint32, servicePortChan chan<- string) {
 	conn, err := net.Dial("udp", BroadcastAddr)
 	Error(err)

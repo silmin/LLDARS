@@ -19,18 +19,21 @@ type LLDARSLayerType uint8
 type LLDARSServeMode uint8
 
 const (
-	LLDARSLayerSize            = 1 + 4 + 4 + 2 + 8
+	LLDARSLayerSize            = 1 + 4 + net.IPv4len + 2 + 8
 	DiscoverBroadcastPayload   = "Is available LLDARS server on this network ?"
 	ServicePortNotifyPayload   = "--NotifyServerPortPayload--"
 	GetObjectRequestPayload    = "--GetObjectRequestPayload--"
 	DeliveryObjectPayload      = "--DeliveryObjectPayload--"
 	EndOfDeliveryPayload       = "--EndOfDelivery--"
-	AcceptSyncingObjectPayload = "--AcceptSyncingObjectPayload--"
-	EndOfSyncPayload           = "--EndOfSyncPayload--"
+	BackupObjectRequestPayload = "--BackupObjectRequestPayload--"
+	AcceptBackupObjectPayload  = "--AcceptSyncingObjectPayload--"
+	SyncObjectRequestPayload   = "--SyncObjectRequestPayload--"
+	AcceptSyncObjectPayload    = "--AcceptSyncObjectPayload--"
 )
 
 func NewDiscoverBroadcast(id uint32, origin net.IP, sp uint16) LLDARSLayer {
 	l := uint64(len(DiscoverBroadcastPayload))
+
 	return NewLLDARSPacket(id, origin, sp, l, DiscoverBroadcast, []byte(DiscoverBroadcastPayload))
 }
 
@@ -54,14 +57,24 @@ func NewEndOfDelivery(id uint32, origin net.IP, sp uint16) LLDARSLayer {
 	return NewLLDARSPacket(id, origin, sp, l, EndOfDelivery, []byte(EndOfDeliveryPayload))
 }
 
-func NewAcceptSyncingObject(id uint32, origin net.IP, sp uint16) LLDARSLayer {
-	l := uint64(len(AcceptSyncingObjectPayload))
-	return NewLLDARSPacket(id, origin, sp, l, AcceptSyncingObject, []byte(AcceptSyncingObjectPayload))
+func NewBackupObjectRequest(id uint32, origin net.IP, sp uint16) LLDARSLayer {
+	l := uint64(len(BackupObjectRequestPayload))
+	return NewLLDARSPacket(id, origin, sp, l, BackupObjectRequest, []byte(BackupObjectRequestPayload))
 }
 
-func NewEndOfSync(id uint32, origin net.IP, sp uint16) LLDARSLayer {
-	l := uint64(len(EndOfSyncPayload))
-	return NewLLDARSPacket(id, origin, sp, l, EndOfSync, []byte(EndOfSyncPayload))
+func NewAcceptBackupObject(id uint32, origin net.IP, sp uint16) LLDARSLayer {
+	l := uint64(len(AcceptBackupObjectPayload))
+	return NewLLDARSPacket(id, origin, sp, l, AcceptBackupObject, []byte(AcceptBackupObjectPayload))
+}
+
+func NewSyncObjectRequest(id uint32, origin net.IP, sp uint16) LLDARSLayer {
+	l := uint64(len(SyncObjectRequestPayload))
+	return NewLLDARSPacket(id, origin, sp, l, SyncObjectRequest, []byte(SyncObjectRequestPayload))
+}
+
+func NewAcceptSyncObject(id uint32, origin net.IP, sp uint16) LLDARSLayer {
+	l := uint64(len(AcceptSyncObjectPayload))
+	return NewLLDARSPacket(id, origin, sp, l, AcceptSyncObject, []byte(AcceptSyncObjectPayload))
 }
 
 func NewLLDARSPacket(id uint32, origin net.IP, sp uint16, l uint64, t LLDARSLayerType, p []byte) LLDARSLayer {
