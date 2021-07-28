@@ -84,8 +84,7 @@ func listenDiscoverBroadcast(ctx context.Context, serverId uint32, listenAddr st
 
 	log.Printf("Listened Delivering Requests *:* udp > %s\n", listenAddr)
 	for {
-		pre := 0
-		buf := make([]byte, pre+lldars.LLDARSLayerSize+len(lldars.DiscoverBroadcastPayload))
+		buf := make([]byte, lldars.LLDARSLayerSize+len(lldars.DiscoverBroadcastPayload))
 		l, err := udpLn.Read(buf)
 		Error(err)
 		msg := buf[:l]
@@ -93,11 +92,10 @@ func listenDiscoverBroadcast(ctx context.Context, serverId uint32, listenAddr st
 		log.Printf("Receive BC from: %v\n", rl.Origin)
 
 		if rl.Type == lldars.DiscoverBroadcast {
-			if (rl.ServerId == 0 || hasBackup(rl.ServerId)) && rl.Origin.String() == origin {
+			if (rl.ServerId == 0 || hasBackup(rl.ServerId)) && rl.Origin.String() != origin {
 				ackBroadcast(serverId, rl, udpLn, origin)
 			}
 		}
-		pre += l
 	}
 }
 
