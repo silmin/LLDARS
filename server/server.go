@@ -51,7 +51,7 @@ func handleService(conn net.Conn, serverId uint32) {
 	Error(err)
 	msg := buf[:l]
 	rl := lldars.Unmarshal(msg)
-	log.Printf("Receive from: %v\tmsg: %s\n", rl.Origin, rl.Payload)
+	log.Printf("Receive from: %v\n", rl.Origin)
 
 	if rl.Type == lldars.GetObjectRequest {
 		buf := make([]byte, rl.Length)
