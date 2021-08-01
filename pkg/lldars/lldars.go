@@ -26,7 +26,7 @@ const (
 	DeliveryObjectPayload      = "--DeliveryObjectPayload--"
 	EndOfDeliveryPayload       = "--EndOfDelivery--"
 	BackupObjectRequestPayload = "--BackupObjectRequestPayload--"
-	AcceptBackupObjectPayload  = "--AcceptSyncingObjectPayload--"
+	AcceptBackupObjectPayload  = "--AcceptBackupObjectPayload--"
 	SyncObjectRequestPayload   = "--SyncObjectRequestPayload--"
 	AcceptSyncObjectPayload    = "--AcceptSyncObjectPayload--"
 )

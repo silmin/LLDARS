@@ -15,7 +15,7 @@ func receiveBackupObjects(conn net.Conn, rl lldars.LLDARSLayer, serverId uint32)
 	msg := sl.Marshal()
 	conn.Write(msg)
 
-	path := fmt.Sprintf("%s/%d/", BackupObjectsPath, serverId)
+	path := fmt.Sprintf("%s/%d/", BackupObjectsPath, rl.ServerId)
 
 	receiveObjects(conn, path)
 }

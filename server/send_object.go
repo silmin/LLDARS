@@ -18,14 +18,12 @@ func sendObjects(conn net.Conn, serverId uint32) {
 		obj, err := ioutil.ReadFile(path)
 		Error(err)
 		sl := lldars.NewDeliveryObject(serverId, localIP(conn), ServicePort, obj)
-		msg := sl.Marshal()
-		conn.Write(msg)
+		conn.Write(sl.Marshal())
 		log.Printf("Send Object > %s len: %d\n", conn.RemoteAddr().String(), sl.Length)
 	}
 
 	sl := lldars.NewEndOfDelivery(serverId, localIP(conn), ServicePort)
-	msg := sl.Marshal()
-	conn.Write(msg)
+	conn.Write(sl.Marshal())
 	return
 }
 

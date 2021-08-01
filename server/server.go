@@ -12,11 +12,12 @@ import (
 )
 
 const (
-	IntervalSeconds   = 1
-	TimeoutSeconds    = 10
-	ServicePort       = 60001
-	LLDARSObjectPath  = "./send_data"
-	BackupObjectsPath = "./backups"
+	IntervalSeconds      = 1
+	TimeoutSeconds       = 10
+	ServicePort          = 60001
+	LLDARSObjectPath     = "./send_data"
+	BackupObjectsPath    = "./backups"
+	BackupIntervalMinute = 1
 )
 
 func Server(ctx context.Context, bcAddr string, origin string, mode lldars.LLDARSServeMode) {
@@ -27,8 +28,11 @@ func Server(ctx context.Context, bcAddr string, origin string, mode lldars.LLDAR
 	}
 	bcCtx, bcClose := context.WithCancel(ctx)
 	defer bcClose()
+	brCtx, brClose := context.WithCancel(ctx)
+	defer brClose()
 
 	go listenDiscoverBroadcast(bcCtx, serverId, bcAddr, origin)
+	go backupRegularly(brCtx, serverId, origin)
 	listenService(serverId)
 
 	return
