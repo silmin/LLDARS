@@ -78,5 +78,5 @@ func sendSyncObjects(conn net.Conn, rl lldars.LLDARSLayer, serverId uint32) {
 	msg := sl.Marshal()
 	conn.Write(msg)
 
-	sendObjects(conn, serverId, getBackupPath(rl.ServerId))
+	sendObjects(conn, serverId, getBackupDirPath(rl.ServerId))
 }

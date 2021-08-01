@@ -89,15 +89,19 @@ func receiveBackupObjects(conn net.Conn, rl lldars.LLDARSLayer, serverId uint32)
 	msg := sl.Marshal()
 	conn.Write(msg)
 
-	path := getBackupPath(rl.ServerId)
+	path := getBackupDirPath(rl.ServerId)
+	if !hasBackup(rl.ServerId) {
+		err := os.Mkdir(path, 0755)
+		Error(err)
+	}
 	receiveObjects(conn, path)
 }
 
 func hasBackup(serverId uint32) bool {
-	f, err := os.Stat(getBackupPath(serverId))
+	f, err := os.Stat(getBackupDirPath(serverId))
 	return err == nil && f.IsDir()
 }
 
-func getBackupPath(serverId uint32) string {
-	return fmt.Sprintf("%s/%v", BackupObjectsPath, serverId)
+func getBackupDirPath(serverId uint32) string {
+	return fmt.Sprintf("%s/%v/", BackupObjectsPath, serverId)
 }
