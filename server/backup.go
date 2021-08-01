@@ -86,14 +86,14 @@ func handleBackup(wg *sync.WaitGroup, addr string, serverId uint32, origin strin
 func receiveBackupObjects(conn net.Conn, rl lldars.LLDARSLayer, serverId uint32, cache *IdCache) {
 	defer conn.Close()
 
-	if cache.Exists(rl.ServerId) {
+	if cache.Exists(cacheBackupKey(rl.ServerId)) {
 		sl := lldars.NewRejectBackupObject(serverId, localIP(conn), ServicePort)
 		conn.Write(sl.Marshal())
 		return
 	} else {
 		sl := lldars.NewAcceptBackupObject(serverId, localIP(conn), ServicePort)
 		conn.Write(sl.Marshal())
-		cache.Put(rl.ServerId, time.Now().Add(ExpirationSecondsOfBackup*time.Second).UnixNano())
+		cache.Put(cacheBackupKey(rl.ServerId), rl.ServerId, time.Now().Add(ExpirationSecondsOfBackup*time.Second).UnixNano())
 	}
 
 	path := getBackupDirPath(rl.ServerId)
@@ -111,4 +111,8 @@ func hasBackup(serverId uint32) bool {
 
 func getBackupDirPath(serverId uint32) string {
 	return fmt.Sprintf("%s%v/", BackupObjectsPath, serverId)
+}
+
+func cacheBackupKey(serverId uint32) string {
+	return fmt.Sprintf("%v-backup", serverId)
 }

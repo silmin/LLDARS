@@ -13,11 +13,11 @@ type item struct {
 
 type IdCache struct {
 	sync.Mutex
-	items map[uint32]*item
+	items map[string]*item
 }
 
 func NewIdCache() *IdCache {
-	c := &IdCache{items: make(map[uint32]*item)}
+	c := &IdCache{items: make(map[string]*item)}
 	go func() {
 		t := time.NewTicker(time.Second)
 		defer t.Stop()
@@ -29,7 +29,7 @@ func NewIdCache() *IdCache {
 				for k, v := range c.items {
 					now := time.Now().UnixNano()
 					if v.IsExpired(now) {
-						log.Printf("%v has expires at %d\n", v.id, now)
+						log.Printf("%v has expires at %d\n", k, now)
 						delete(c.items, k)
 					}
 				}
@@ -47,10 +47,10 @@ func (i *item) IsExpired(t int64) bool {
 	return t > i.expires
 }
 
-func (c *IdCache) Put(id uint32, expires int64) {
+func (c *IdCache) Put(key string, id uint32, expires int64) {
 	c.Lock()
-	if _, ok := c.items[id]; !ok {
-		c.items[id] = &item{
+	if _, ok := c.items[key]; !ok {
+		c.items[key] = &item{
 			id:      id,
 			expires: expires,
 		}
@@ -58,9 +58,9 @@ func (c *IdCache) Put(id uint32, expires int64) {
 	c.Unlock()
 }
 
-func (c *IdCache) Exists(id uint32) bool {
+func (c *IdCache) Exists(key string) bool {
 	c.Lock()
-	_, ok := c.items[id]
+	_, ok := c.items[key]
 	c.Unlock()
 
 	if ok {

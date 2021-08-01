@@ -104,8 +104,8 @@ func listenDiscoverBroadcast(ctx context.Context, serverId uint32, listenAddr st
 		log.Printf("Receive BC from: %v\n", rl.Origin)
 
 		if rl.Type == lldars.DiscoverBroadcast && rl.Origin.String() != origin {
-			if !cache.Exists(rl.ServerId) {
-				cache.Put(rl.ServerId, time.Now().Add(ExpirationSecondsOfAck*time.Second).UnixNano())
+			if !cache.Exists(cacheAckKey(serverId)) {
+				cache.Put(cacheAckKey(serverId), rl.ServerId, time.Now().Add(ExpirationSecondsOfAck*time.Second).UnixNano())
 				ackBroadcast(serverId, rl, udpLn, origin)
 			}
 		}
@@ -124,6 +124,10 @@ func ackBroadcast(serverId uint32, rl lldars.LLDARSLayer, udpLn *net.UDPConn, or
 func localIP(conn net.Conn) net.IP {
 	ipstr, _ := lldars.ParseIpPort(conn.LocalAddr().String())
 	return net.ParseIP(ipstr).To4()
+}
+
+func cacheAckKey(serverId uint32) string {
+	return fmt.Sprintf("%v-ack", serverId)
 }
 
 func Error(_err error) {
