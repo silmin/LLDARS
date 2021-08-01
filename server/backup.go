@@ -69,7 +69,7 @@ func handleBackup(wg *sync.WaitGroup, addr string, serverId uint32, origin strin
 	sl := lldars.NewBackupObjectRequest(serverId, net.ParseIP(ip).To4(), 0)
 	conn.Write(sl.Marshal())
 
-	rl := readLLDARSHeader(conn)
+	rl := ReadLLDARSHeader(conn)
 
 	if rl.Type == lldars.AcceptBackupObject {
 		sendObjects(conn, serverId, LLDARSObjectPath)

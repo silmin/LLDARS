@@ -24,9 +24,9 @@ func sendObjects(conn net.Conn, serverId uint32, path string) {
 	sl := lldars.NewEndOfDelivery(serverId, localIP(conn), ServicePort)
 	conn.Write(sl.Marshal())
 
-	rl := readLLDARSHeader(conn)
+	rl := ReadLLDARSHeader(conn)
 	if rl.Type == lldars.ReceivedObjects {
-		_ = readLLDARSPayload(conn, rl.Length)
+		_ = ReadLLDARSPayload(conn, rl.Length)
 		log.Println("-Receive ReceivedObjects-")
 		return
 	}

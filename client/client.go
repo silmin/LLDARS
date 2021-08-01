@@ -10,6 +10,7 @@ import (
 	"time"
 
 	"github.com/silmin/lldars/pkg/lldars"
+	"github.com/silmin/lldars/server"
 )
 
 const (
@@ -56,10 +57,7 @@ func (c *Client) getObjects(addr string) {
 		filename := ReceiveObjectPath + genFilename()
 
 		// header
-		buf := make([]byte, lldars.LLDARSLayerSize)
-		l, err := conn.Read(buf)
-		Error(err)
-		rl := lldars.Unmarshal(buf[:l])
+		rl := server.ReadLLDARSHeader(conn)
 		log.Printf("Recieve from: %v\tpayload-len: %d\n", rl.Origin, rl.Length)
 		log.Printf("serverId: %d\n", rl.ServerId)
 		if rl.Type == lldars.EndOfDelivery {
@@ -72,21 +70,7 @@ func (c *Client) getObjects(addr string) {
 		}
 
 		// object
-		var obj []byte
-		receivedBytes := 0
-		for {
-			bufSize := rl.Length - uint64(receivedBytes)
-			if bufSize <= 0 {
-				break
-			}
-			buf = make([]byte, bufSize)
-			l, err = conn.Read(buf)
-			Error(err)
-			receivedBytes += l
-			obj = append(obj, buf[:l]...)
-			log.Printf("Read Parts %d (%d/%d)\n", l, len(obj), rl.Length)
-		}
-
+		obj := server.ReadLLDARSPayload(conn, rl.Length)
 		if len(obj) != 0 {
 			err = ioutil.WriteFile(filename, obj, 0644)
 			Error(err)

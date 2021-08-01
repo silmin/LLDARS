@@ -6,7 +6,7 @@ import (
 	"github.com/silmin/lldars/pkg/lldars"
 )
 
-func readLLDARSHeader(conn net.Conn) lldars.LLDARSLayer {
+func ReadLLDARSHeader(conn net.Conn) lldars.LLDARSLayer {
 	var header []byte
 	for {
 		bufSize := lldars.LLDARSLayerSize - len(header)
@@ -23,7 +23,7 @@ func readLLDARSHeader(conn net.Conn) lldars.LLDARSLayer {
 	return rl
 }
 
-func readLLDARSPayload(conn net.Conn, length uint64) []byte {
+func ReadLLDARSPayload(conn net.Conn, length uint64) []byte {
 	var payload []byte
 	for {
 		bufSize := int(length) - len(payload)

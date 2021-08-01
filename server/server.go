@@ -62,19 +62,19 @@ func listenService(serverId uint32, cache *IdCache) {
 
 func handleService(conn net.Conn, serverId uint32, cache *IdCache) {
 	defer conn.Close()
-	rl := readLLDARSHeader(conn)
+	rl := ReadLLDARSHeader(conn)
 	log.Printf("Receive from: %v\n", rl.Origin)
 
 	if rl.Type == lldars.GetObjectRequest {
-		_ = readLLDARSPayload(conn, rl.Length)
+		_ = ReadLLDARSPayload(conn, rl.Length)
 
 		sendObjects(conn, serverId, LLDARSObjectPath)
 	} else if rl.Type == lldars.SyncObjectRequest {
-		_ = readLLDARSPayload(conn, rl.Length)
+		_ = ReadLLDARSPayload(conn, rl.Length)
 
 		sendSyncObjects(conn, rl, serverId)
 	} else if rl.Type == lldars.BackupObjectRequest {
-		_ = readLLDARSPayload(conn, rl.Length)
+		_ = ReadLLDARSPayload(conn, rl.Length)
 
 		receiveBackupObjects(conn, rl, serverId, cache)
 	}
@@ -99,8 +99,12 @@ func listenDiscoverBroadcast(ctx context.Context, serverId uint32, listenAddr st
 		log.Printf("Receive BC from: %v\n", rl.Origin)
 
 		if rl.Type == lldars.DiscoverBroadcast && rl.Origin.String() != origin {
-			if rl.ServerId != 0 && !cache.Exists(cacheAckKey(serverId)) {
-				cache.Push(cacheAckKey(serverId), rl.ServerId, time.Now().Add(ExpirationSecondsOfAck*time.Second).UnixNano())
+			if rl.ServerId != 0 {
+				if !cache.Exists(cacheAckKey(serverId)) {
+					cache.Push(cacheAckKey(serverId), rl.ServerId, time.Now().Add(ExpirationSecondsOfAck*time.Second).UnixNano())
+					ackBroadcast(serverId, rl, udpLn, origin)
+				}
+			} else {
 				ackBroadcast(serverId, rl, udpLn, origin)
 			}
 		}

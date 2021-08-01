@@ -14,7 +14,7 @@ func receiveObjects(conn net.Conn, serverId uint32, path string) {
 	log.Println("--Start receiving objects--")
 	for {
 		// header
-		rl := readLLDARSHeader(conn)
+		rl := ReadLLDARSHeader(conn)
 		log.Printf("Recieve from: %v\tpayload-len: %d\n", rl.Origin, rl.Length)
 		log.Printf("from serverId: %d\n", rl.ServerId)
 		if rl.Type == lldars.EndOfDelivery {
@@ -29,7 +29,7 @@ func receiveObjects(conn net.Conn, serverId uint32, path string) {
 		filename := path + genFilename()
 
 		// object
-		obj := readLLDARSPayload(conn, rl.Length)
+		obj := ReadLLDARSPayload(conn, rl.Length)
 		if len(obj) != 0 {
 			err := ioutil.WriteFile(filename, obj, 0644)
 			Error(err)
