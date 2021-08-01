@@ -53,21 +53,20 @@ func discoverBroadcast(ctx context.Context, serverId uint32, servicePortChan cha
 func listenAck(ctx context.Context, udpLn *net.UDPConn, serviceAddrChan chan<- string) {
 	log.Println("Start listenAck()")
 	localAddr := localIP(udpLn)
+	bs := lldars.LLDARSLayerSize + len(lldars.ServicePortNotifyPayload)
+	cnt := 1
 
 	for {
-		buf := make([]byte, lldars.LLDARSLayerSize)
+		s := bs * cnt
+		buf := make([]byte, s)
 		l, err := udpLn.Read(buf)
 		Error(err)
-		rl := lldars.Unmarshal(buf[:l])
-
-		buf = make([]byte, rl.Length)
-		l, err = udpLn.Read(buf)
-		Error(err)
-		rl.Payload = buf[:l]
+		rl := lldars.Unmarshal(buf[s-bs : l])
 
 		if !lldars.IsEqualIP(rl.Origin, localAddr) {
-			log.Printf("Receive Ack from: %v\tmsg: %s\n", rl.Origin, rl.Payload)
+			log.Printf("Receive Ack from: %v\tsId: %v\tmsg: %s\n", rl.Origin, rl.ServerId, rl.Payload)
 			serviceAddrChan <- fmt.Sprintf("%s:%d", rl.Origin.String(), rl.ServicePort)
 		}
+		cnt++
 	}
 }
