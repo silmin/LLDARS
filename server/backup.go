@@ -86,7 +86,7 @@ func handleBackup(wg *sync.WaitGroup, addr string, serverId uint32, origin strin
 func receiveBackupObjects(conn net.Conn, rl lldars.LLDARSLayer, serverId uint32, cache *IdCache) {
 	defer conn.Close()
 
-	if cache.Exists(cacheBackupKey(rl.ServerId)) {
+	if rl.ServerId != 0 && cache.Exists(cacheBackupKey(rl.ServerId)) {
 		sl := lldars.NewRejectBackupObject(serverId, localIP(conn), ServicePort)
 		conn.Write(sl.Marshal())
 		return
