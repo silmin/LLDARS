@@ -28,6 +28,9 @@ func sendObjects(conn net.Conn, serverId uint32, path string) {
 		buf := make([]byte, lldars.LLDARSLayerSize)
 		l, err := conn.Read(buf)
 		Error(err)
+		if l < lldars.LLDARSLayerSize {
+			continue
+		}
 		rl := lldars.Unmarshal(buf[:l])
 		if rl.Type == lldars.ReceivedObjects {
 			return
