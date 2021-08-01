@@ -69,10 +69,7 @@ func handleBackup(wg *sync.WaitGroup, addr string, serverId uint32, origin strin
 	sl := lldars.NewBackupObjectRequest(serverId, net.ParseIP(ip).To4(), 0)
 	conn.Write(sl.Marshal())
 
-	buf := make([]byte, lldars.LLDARSLayerSize)
-	l, err := conn.Read(buf)
-	Error(err)
-	rl := lldars.Unmarshal(buf[:l])
+	rl := readLLDARSHeader(conn)
 
 	if rl.Type == lldars.AcceptBackupObject {
 		sendObjects(conn, serverId, LLDARSObjectPath)
@@ -93,7 +90,7 @@ func receiveBackupObjects(conn net.Conn, rl lldars.LLDARSLayer, serverId uint32,
 	} else {
 		sl := lldars.NewAcceptBackupObject(serverId, localIP(conn), ServicePort)
 		conn.Write(sl.Marshal())
-		cache.Put(cacheBackupKey(rl.ServerId), rl.ServerId, time.Now().Add(ExpirationSecondsOfBackup*time.Second).UnixNano())
+		cache.Push(cacheBackupKey(rl.ServerId), rl.ServerId, time.Now().Add(ExpirationSecondsOfBackup*time.Second).UnixNano())
 	}
 
 	path := getBackupDirPath(rl.ServerId)

@@ -62,29 +62,19 @@ func listenService(serverId uint32, cache *IdCache) {
 
 func handleService(conn net.Conn, serverId uint32, cache *IdCache) {
 	defer conn.Close()
-	buf := make([]byte, lldars.LLDARSLayerSize)
-	l, err := conn.Read(buf)
-	Error(err)
-	msg := buf[:l]
-	rl := lldars.Unmarshal(msg)
+	rl := readLLDARSHeader(conn)
 	log.Printf("Receive from: %v\n", rl.Origin)
 
 	if rl.Type == lldars.GetObjectRequest {
-		buf := make([]byte, rl.Length)
-		_, err := conn.Read(buf)
-		Error(err)
+		_ = readLLDARSPayload(conn, rl.Length)
 
 		sendObjects(conn, serverId, LLDARSObjectPath)
 	} else if rl.Type == lldars.SyncObjectRequest {
-		buf := make([]byte, rl.Length)
-		_, err := conn.Read(buf)
-		Error(err)
+		_ = readLLDARSPayload(conn, rl.Length)
 
 		sendSyncObjects(conn, rl, serverId)
 	} else if rl.Type == lldars.BackupObjectRequest {
-		buf := make([]byte, rl.Length)
-		_, err := conn.Read(buf)
-		Error(err)
+		_ = readLLDARSPayload(conn, rl.Length)
 
 		receiveBackupObjects(conn, rl, serverId, cache)
 	}
@@ -110,7 +100,7 @@ func listenDiscoverBroadcast(ctx context.Context, serverId uint32, listenAddr st
 
 		if rl.Type == lldars.DiscoverBroadcast && rl.Origin.String() != origin {
 			if rl.ServerId != 0 && !cache.Exists(cacheAckKey(serverId)) {
-				cache.Put(cacheAckKey(serverId), rl.ServerId, time.Now().Add(ExpirationSecondsOfAck*time.Second).UnixNano())
+				cache.Push(cacheAckKey(serverId), rl.ServerId, time.Now().Add(ExpirationSecondsOfAck*time.Second).UnixNano())
 				ackBroadcast(serverId, rl, udpLn, origin)
 			}
 		}

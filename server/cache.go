@@ -47,7 +47,7 @@ func (i *item) IsExpired(t int64) bool {
 	return t > i.expires
 }
 
-func (c *IdCache) Put(key string, id uint32, expires int64) {
+func (c *IdCache) Push(key string, id uint32, expires int64) {
 	c.Lock()
 	if _, ok := c.items[key]; !ok {
 		c.items[key] = &item{
