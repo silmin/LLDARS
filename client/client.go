@@ -63,6 +63,9 @@ func (c *Client) getObjects(addr string) {
 		log.Printf("Recieve from: %v\tpayload-len: %d\n", rl.Origin, rl.Length)
 		log.Printf("serverId: %d\n", rl.ServerId)
 		if rl.Type == lldars.EndOfDelivery {
+			sl := lldars.NewReceivedObjects(0, localIP(conn), 0)
+			conn.Write(sl.Marshal())
+			log.Println("--End receiving objects--")
 			break
 		} else if rl.Type != lldars.DeliveryObject {
 			continue
@@ -152,6 +155,11 @@ func (c *Client) listenAck(ctx context.Context, udpLn *net.UDPConn, serviceAddr 
 func genFilename() string {
 	t := time.Now()
 	return fmt.Sprintf("%s.zip", t.Format("20060102T150405.000"))
+}
+
+func localIP(conn net.Conn) net.IP {
+	ipstr, _ := lldars.ParseIpPort(conn.LocalAddr().String())
+	return net.ParseIP(ipstr).To4()
 }
 
 func Error(_err error) {

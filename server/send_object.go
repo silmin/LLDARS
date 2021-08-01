@@ -24,7 +24,16 @@ func sendObjects(conn net.Conn, serverId uint32, path string) {
 
 	sl := lldars.NewEndOfDelivery(serverId, localIP(conn), ServicePort)
 	conn.Write(sl.Marshal())
-	return
+
+	for {
+		buf := make([]byte, lldars.LLDARSLayerSize)
+		l, err := conn.Read(buf)
+		Error(err)
+		rl := lldars.Unmarshal(buf[:l])
+		if rl.Type == lldars.ReceivedObjects {
+			return
+		}
+	}
 }
 
 func getObjectPaths(path string) []string {

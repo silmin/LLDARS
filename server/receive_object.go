@@ -10,9 +10,10 @@ import (
 	"github.com/silmin/lldars/pkg/lldars"
 )
 
-func receiveObjects(conn net.Conn, path string) {
+func receiveObjects(conn net.Conn, serverId uint32, path string) {
 	defer conn.Close()
 
+	log.Println("--Start receiving objects--")
 	for {
 		filename := path + genFilename()
 
@@ -24,6 +25,9 @@ func receiveObjects(conn net.Conn, path string) {
 		log.Printf("Recieve from: %v\tpayload-len: %d\n", rl.Origin, rl.Length)
 		log.Printf("from serverId: %d\n", rl.ServerId)
 		if rl.Type == lldars.EndOfDelivery {
+			sl := lldars.NewReceivedObjects(serverId, localIP(conn), ServicePort)
+			conn.Write(sl.Marshal())
+			log.Println("--End receiving objects--")
 			return
 		} else if rl.Type != lldars.DeliveryObject {
 			continue

@@ -25,6 +25,7 @@ const (
 	GetObjectRequestPayload    = "--GetObjectRequestPayload--"
 	DeliveryObjectPayload      = "--DeliveryObjectPayload--"
 	EndOfDeliveryPayload       = "--EndOfDelivery--"
+	ReceivedObjectsPayload     = "--ReceivedObjectsPayload--"
 	BackupObjectRequestPayload = "--BackupObjectRequestPayload--"
 	AcceptBackupObjectPayload  = "--AcceptBackupObjectPayload--"
 	RejectBackupObjectPayload  = "--RejectBackupObjectPayload--"
@@ -57,6 +58,11 @@ func NewDeliveryObject(id uint32, origin net.IP, sp uint16, obj []byte) LLDARSLa
 func NewEndOfDelivery(id uint32, origin net.IP, sp uint16) LLDARSLayer {
 	l := uint64(len(EndOfDeliveryPayload))
 	return NewLLDARSPacket(id, origin, sp, l, EndOfDelivery, []byte(EndOfDeliveryPayload))
+}
+
+func NewReceivedObjects(id uint32, origin net.IP, sp uint16) LLDARSLayer {
+	l := uint64(len(ReceivedObjectsPayload))
+	return NewLLDARSPacket(id, origin, sp, l, ReceivedObjects, []byte(ReceivedObjectsPayload))
 }
 
 func NewBackupObjectRequest(id uint32, origin net.IP, sp uint16) LLDARSLayer {

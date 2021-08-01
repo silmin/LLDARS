@@ -6,6 +6,7 @@ const (
 	GetObjectRequest                           // オブジェクト取得要求
 	DeliveryObject                             // オブジェクト配送
 	EndOfDelivery                              // オブジェクト配送終了
+	ReceivedObjects                            // オブジェクト受け取り完了
 	BackupObjectRequest                        // backupのための受信要求
 	AcceptBackupObject                         // backupのための受信要求へのAck
 	RejectBackupObject                         // backupのための受信要求を却下
