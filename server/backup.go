@@ -101,7 +101,7 @@ func receiveBackupObjects(conn net.Conn, rl lldars.LLDARSLayer, serverId uint32,
 		err := os.Mkdir(path, 0755)
 		Error(err)
 	}
-	receiveObjects(conn, path)
+	receiveObjects(conn, serverId, path)
 }
 
 func hasBackup(serverId uint32) bool {
