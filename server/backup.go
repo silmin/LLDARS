@@ -2,8 +2,10 @@ package server
 
 import (
 	"context"
+	"fmt"
 	"log"
 	"net"
+	"os"
 	"sync"
 	"time"
 
@@ -59,7 +61,7 @@ func handleBackup(wg sync.WaitGroup, addr string, serverId uint32, origin string
 	defer func() {
 		conn.Close()
 		wg.Done()
-		log.Println("--Completed Backup--")
+		log.Printf("-Completed Backup to %v-", addr)
 	}()
 
 	ip, _ := lldars.ParseIpPort(conn.LocalAddr().String())
@@ -72,8 +74,30 @@ func handleBackup(wg sync.WaitGroup, addr string, serverId uint32, origin string
 	rl := lldars.Unmarshal(buf[:l])
 
 	if rl.Type == lldars.AcceptBackupObject {
-		sendObjects(conn, serverId)
+		sendObjects(conn, serverId, LLDARSObjectPath)
+	} else if rl.Type == lldars.RejectBackupObject {
+		log.Println("-Rejected Backup-")
 	}
 
 	return
+}
+
+func receiveBackupObjects(conn net.Conn, rl lldars.LLDARSLayer, serverId uint32) {
+	defer conn.Close()
+
+	sl := lldars.NewAcceptBackupObject(serverId, localIP(conn), ServicePort)
+	msg := sl.Marshal()
+	conn.Write(msg)
+
+	path := getBackupPath(rl.ServerId)
+	receiveObjects(conn, path)
+}
+
+func hasBackup(serverId uint32) bool {
+	f, err := os.Stat(getBackupPath(serverId))
+	return err == nil && f.IsDir()
+}
+
+func getBackupPath(serverId uint32) string {
+	return fmt.Sprintf("%s/%v", BackupObjectsPath, serverId)
 }

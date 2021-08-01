@@ -8,8 +8,10 @@ const (
 	EndOfDelivery                              // オブジェクト配送終了
 	BackupObjectRequest                        // backupのための受信要求
 	AcceptBackupObject                         // backupのための受信要求へのAck
+	RejectBackupObject                         // backupのための受信要求を却下
 	SyncObjectRequest                          // 復元のための送信要求
 	AcceptSyncObject                           // 復元のための送信要求へのAck
+	RejectSyncObject                           // 復元のための送信要求を却下
 )
 
 func (t LLDARSLayerType) String() string {

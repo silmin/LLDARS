@@ -1,9 +1,11 @@
 package server
 
 import (
+	"fmt"
 	"io/ioutil"
 	"log"
 	"net"
+	"time"
 
 	"github.com/silmin/lldars/pkg/lldars"
 )
@@ -47,4 +49,9 @@ func receiveObjects(conn net.Conn, path string) {
 			log.Printf("Receive Object > %s, len: %d\n", filename, rl.Length)
 		}
 	}
+}
+
+func genFilename() string {
+	t := time.Now()
+	return fmt.Sprintf("%s.zip", t.Format("20060102T150405.000"))
 }

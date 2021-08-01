@@ -52,7 +52,31 @@ func handleSync(wg sync.WaitGroup, addr string, serverId uint32) {
 	sl := lldars.NewSyncObjectRequest(serverId, net.ParseIP(ip).To4(), 0)
 	conn.Write(sl.Marshal())
 
-	receiveObjects(conn, LLDARSObjectPath)
+	buf := make([]byte, lldars.LLDARSLayerSize)
+	l, err := conn.Read(buf)
+	Error(err)
+	rl := lldars.Unmarshal(buf[:l])
 
+	if rl.Type == lldars.AcceptSyncObject {
+		receiveObjects(conn, LLDARSObjectPath)
+	} else if rl.Type == lldars.RejectSyncObject {
+		log.Println("-Rejected Sync-")
+	}
 	return
+}
+
+func sendSyncObjects(conn net.Conn, rl lldars.LLDARSLayer, serverId uint32) {
+	defer conn.Close()
+
+	if !hasBackup(rl.ServerId) {
+		sl := lldars.NewRejectSyncObject(serverId, localIP(conn), ServicePort)
+		msg := sl.Marshal()
+		conn.Write(msg)
+		return
+	}
+	sl := lldars.NewAcceptSyncObject(serverId, localIP(conn), ServicePort)
+	msg := sl.Marshal()
+	conn.Write(msg)
+
+	sendObjects(conn, serverId, getBackupPath(rl.ServerId))
 }

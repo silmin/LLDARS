@@ -5,7 +5,6 @@ import (
 	"fmt"
 	"log"
 	"net"
-	"os"
 
 	"github.com/google/uuid"
 	"github.com/silmin/lldars/pkg/lldars"
@@ -22,6 +21,7 @@ const (
 
 func Server(ctx context.Context, bcAddr string, origin string, mode lldars.LLDARSServeMode) {
 	serverId := uuid.New().ID()
+	log.Printf("Server ID: %v\n", serverId)
 
 	if mode == lldars.RevivalMode {
 		syCtx, syClose := context.WithCancel(ctx)
@@ -64,13 +64,13 @@ func handleService(conn net.Conn, serverId uint32) {
 		_, err := conn.Read(buf)
 		Error(err)
 
-		sendObjects(conn, serverId)
+		sendObjects(conn, serverId, LLDARSObjectPath)
 	} else if rl.Type == lldars.SyncObjectRequest {
 		buf := make([]byte, rl.Length)
 		_, err := conn.Read(buf)
 		Error(err)
 
-		sendObjects(conn, serverId)
+		sendSyncObjects(conn, rl, serverId)
 	} else if rl.Type == lldars.BackupObjectRequest {
 		buf := make([]byte, rl.Length)
 		_, err := conn.Read(buf)
@@ -98,10 +98,8 @@ func listenDiscoverBroadcast(ctx context.Context, serverId uint32, listenAddr st
 		rl := lldars.Unmarshal(msg)
 		log.Printf("Receive BC from: %v\n", rl.Origin)
 
-		if rl.Type == lldars.DiscoverBroadcast {
-			if (rl.ServerId == 0 || hasBackup(rl.ServerId)) && rl.Origin.String() != origin {
-				ackBroadcast(serverId, rl, udpLn, origin)
-			}
+		if rl.Type == lldars.DiscoverBroadcast && rl.Origin.String() != origin {
+			ackBroadcast(serverId, rl, udpLn, origin)
 		}
 	}
 }
@@ -113,12 +111,6 @@ func ackBroadcast(serverId uint32, rl lldars.LLDARSLayer, udpLn *net.UDPConn, or
 	Error(err)
 	udpLn.WriteToUDP([]byte(sl.Marshal()), ackAddr)
 	log.Printf("Ack to: %v\tmsg: %s\n", ackAddr.IP.String(), sl.Payload)
-}
-
-func hasBackup(serverId uint32) bool {
-	path := fmt.Sprintf("%s/%d", BackupObjectsPath, serverId)
-	f, err := os.Stat(path)
-	return err == nil && f.IsDir()
 }
 
 func localIP(conn net.Conn) net.IP {

@@ -9,11 +9,11 @@ import (
 	"github.com/silmin/lldars/pkg/lldars"
 )
 
-func sendObjects(conn net.Conn, serverId uint32) {
+func sendObjects(conn net.Conn, serverId uint32, path string) {
 	defer conn.Close()
 	log.Printf("serverId: %d", serverId)
 
-	paths := getObjectPaths(LLDARSObjectPath)
+	paths := getObjectPaths(path)
 	for _, path := range paths {
 		obj, err := ioutil.ReadFile(path)
 		Error(err)
