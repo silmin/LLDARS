@@ -11,8 +11,6 @@ import (
 )
 
 func receiveObjects(conn net.Conn, serverId uint32, path string) {
-	defer conn.Close()
-
 	log.Println("--Start receiving objects--")
 	for {
 		filename := path + genFilename()

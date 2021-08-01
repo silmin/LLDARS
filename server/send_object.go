@@ -10,7 +10,6 @@ import (
 )
 
 func sendObjects(conn net.Conn, serverId uint32, path string) {
-	defer conn.Close()
 	log.Printf("serverId: %d", serverId)
 
 	paths := getObjectPaths(path)
