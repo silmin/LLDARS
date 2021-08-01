@@ -16,8 +16,8 @@ const (
 	TimeoutSeconds         = 10
 	ExpirationSecondsOfAck = 30
 	ServicePort            = 60001
-	LLDARSObjectPath       = "./send_data"
-	BackupObjectsPath      = "./backups"
+	LLDARSObjectPath       = "./send_data/"
+	BackupObjectsPath      = "./backups/"
 	BroadcastAddr          = "192.168.100.255:60000"
 )
 

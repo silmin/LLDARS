@@ -29,7 +29,7 @@ func NewIdCache() *IdCache {
 				for k, v := range c.items {
 					now := time.Now().UnixNano()
 					if v.IsExpired(now) {
-						log.Printf("%v has expires at %d\n", v, now)
+						log.Printf("%v has expires at %d\n", v.id, now)
 						delete(c.items, k)
 					}
 				}

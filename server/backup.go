@@ -110,5 +110,5 @@ func hasBackup(serverId uint32) bool {
 }
 
 func getBackupDirPath(serverId uint32) string {
-	return fmt.Sprintf("%s/%v/", BackupObjectsPath, serverId)
+	return fmt.Sprintf("%s%v/", BackupObjectsPath, serverId)
 }

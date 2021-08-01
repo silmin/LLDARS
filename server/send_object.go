@@ -28,7 +28,7 @@ func sendObjects(conn net.Conn, serverId uint32, path string) {
 }
 
 func getObjectPaths(path string) []string {
-	pat := path + "/*.zip"
+	pat := path + "*.zip"
 	files, err := filepath.Glob(pat)
 	Error(err)
 	return files
