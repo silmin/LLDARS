@@ -118,7 +118,7 @@ func ackBroadcast(serverId uint32, rl lldars.LLDARSLayer, udpLn *net.UDPConn, or
 func hasBackup(serverId uint32) bool {
 	path := fmt.Sprintf("%s/%d", BackupObjectsPath, serverId)
 	f, err := os.Stat(path)
-	return f.IsDir() && !os.IsNotExist(err)
+	return err == nil && f.IsDir()
 }
 
 func localIP(conn net.Conn) net.IP {
