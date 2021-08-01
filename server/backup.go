@@ -39,7 +39,7 @@ func backupObjects(ctx context.Context, serverId uint32, origin string) {
 	serviceAddrChan := make(chan string)
 	go discoverBroadcast(dcCtx, serverId, serviceAddrChan)
 
-	var wg sync.WaitGroup
+	wg := new(sync.WaitGroup)
 
 	for {
 		select {
@@ -55,7 +55,7 @@ func backupObjects(ctx context.Context, serverId uint32, origin string) {
 	}
 }
 
-func handleBackup(wg sync.WaitGroup, addr string, serverId uint32, origin string) {
+func handleBackup(wg *sync.WaitGroup, addr string, serverId uint32, origin string) {
 	conn, err := net.Dial("tcp", addr)
 	Error(err)
 	defer func() {
@@ -82,12 +82,18 @@ func handleBackup(wg sync.WaitGroup, addr string, serverId uint32, origin string
 	return
 }
 
-func receiveBackupObjects(conn net.Conn, rl lldars.LLDARSLayer, serverId uint32) {
+func receiveBackupObjects(conn net.Conn, rl lldars.LLDARSLayer, serverId uint32, cache *AckIdCache) {
 	defer conn.Close()
 
-	sl := lldars.NewAcceptBackupObject(serverId, localIP(conn), ServicePort)
-	msg := sl.Marshal()
-	conn.Write(msg)
+	if cache.Exists(rl.ServerId) {
+		sl := lldars.NewRejectBackupObject(serverId, localIP(conn), ServicePort)
+		conn.Write(sl.Marshal())
+		return
+	} else {
+		sl := lldars.NewAcceptBackupObject(serverId, localIP(conn), ServicePort)
+		conn.Write(sl.Marshal())
+		cache.Put(rl.ServerId, time.Now().Add(ExpirationSecondsOfAck*time.Second).UnixNano())
+	}
 
 	path := getBackupDirPath(rl.ServerId)
 	if !hasBackup(rl.ServerId) {

@@ -23,7 +23,7 @@ func syncObjects(ctx context.Context, serverId uint32) {
 	serviceAddrChan := make(chan string)
 	go discoverBroadcast(dcCtx, serverId, serviceAddrChan)
 
-	var wg sync.WaitGroup
+	wg := new(sync.WaitGroup)
 
 	for {
 		select {
@@ -39,7 +39,7 @@ func syncObjects(ctx context.Context, serverId uint32) {
 	}
 }
 
-func handleSync(wg sync.WaitGroup, addr string, serverId uint32) {
+func handleSync(wg *sync.WaitGroup, addr string, serverId uint32) {
 	conn, err := net.Dial("tcp", addr)
 	Error(err)
 	defer func() {
@@ -70,13 +70,11 @@ func sendSyncObjects(conn net.Conn, rl lldars.LLDARSLayer, serverId uint32) {
 
 	if !hasBackup(rl.ServerId) {
 		sl := lldars.NewRejectSyncObject(serverId, localIP(conn), ServicePort)
-		msg := sl.Marshal()
-		conn.Write(msg)
+		conn.Write(sl.Marshal())
 		return
 	}
 	sl := lldars.NewAcceptSyncObject(serverId, localIP(conn), ServicePort)
-	msg := sl.Marshal()
-	conn.Write(msg)
+	conn.Write(sl.Marshal())
 
 	sendObjects(conn, serverId, getBackupDirPath(rl.ServerId))
 }

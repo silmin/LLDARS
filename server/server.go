@@ -5,18 +5,20 @@ import (
 	"fmt"
 	"log"
 	"net"
+	"time"
 
 	"github.com/google/uuid"
 	"github.com/silmin/lldars/pkg/lldars"
 )
 
 const (
-	IntervalSeconds   = 1
-	TimeoutSeconds    = 10
-	ServicePort       = 60001
-	LLDARSObjectPath  = "./send_data"
-	BackupObjectsPath = "./backups"
-	BroadcastAddr     = "192.168.100.255:60000"
+	IntervalSeconds        = 1
+	TimeoutSeconds         = 10
+	ExpirationSecondsOfAck = 10
+	ServicePort            = 60001
+	LLDARSObjectPath       = "./send_data"
+	BackupObjectsPath      = "./backups"
+	BroadcastAddr          = "192.168.100.255:60000"
 )
 
 func Server(ctx context.Context, bcAddr string, origin string, mode lldars.LLDARSServeMode) {
@@ -33,24 +35,26 @@ func Server(ctx context.Context, bcAddr string, origin string, mode lldars.LLDAR
 	brCtx, brClose := context.WithCancel(ctx)
 	defer brClose()
 
-	go listenDiscoverBroadcast(bcCtx, serverId, bcAddr, origin)
+	cache := NewAckIdCache()
+
+	go listenDiscoverBroadcast(bcCtx, serverId, bcAddr, origin, cache)
 	go backupRegularly(brCtx, serverId, origin)
-	listenService(serverId)
+	listenService(serverId, cache)
 
 	return
 }
 
-func listenService(serverId uint32) {
+func listenService(serverId uint32, cache *AckIdCache) {
 	ln, err := net.Listen("tcp", fmt.Sprintf(":%d", ServicePort))
 	Error(err)
 	for {
 		conn, err := ln.Accept()
 		Error(err)
-		go handleService(conn, serverId)
+		go handleService(conn, serverId, cache)
 	}
 }
 
-func handleService(conn net.Conn, serverId uint32) {
+func handleService(conn net.Conn, serverId uint32, cache *AckIdCache) {
 	defer conn.Close()
 	buf := make([]byte, lldars.LLDARSLayerSize)
 	l, err := conn.Read(buf)
@@ -76,13 +80,13 @@ func handleService(conn net.Conn, serverId uint32) {
 		_, err := conn.Read(buf)
 		Error(err)
 
-		receiveBackupObjects(conn, rl, serverId)
+		receiveBackupObjects(conn, rl, serverId, cache)
 	}
 
 	return
 }
 
-func listenDiscoverBroadcast(ctx context.Context, serverId uint32, listenAddr string, origin string) {
+func listenDiscoverBroadcast(ctx context.Context, serverId uint32, listenAddr string, origin string, cache *AckIdCache) {
 	udpAddr, err := net.ResolveUDPAddr("udp", listenAddr)
 	Error(err)
 	udpLn, err := net.ListenUDP("udp", udpAddr)
@@ -99,7 +103,10 @@ func listenDiscoverBroadcast(ctx context.Context, serverId uint32, listenAddr st
 		log.Printf("Receive BC from: %v\n", rl.Origin)
 
 		if rl.Type == lldars.DiscoverBroadcast && rl.Origin.String() != origin {
-			ackBroadcast(serverId, rl, udpLn, origin)
+			if !cache.Exists(rl.ServerId) {
+				cache.Put(rl.ServerId, time.Now().Add(ExpirationSecondsOfAck*time.Second).UnixNano())
+				ackBroadcast(serverId, rl, udpLn, origin)
+			}
 		}
 	}
 }
