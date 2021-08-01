@@ -12,13 +12,12 @@ import (
 )
 
 const (
-	IntervalSeconds      = 1
-	TimeoutSeconds       = 10
-	ServicePort          = 60001
-	LLDARSObjectPath     = "./send_data"
-	BackupObjectsPath    = "./backups"
-	BackupIntervalMinute = 1
-	BroadcastAddr        = "192.168.100.255:60000"
+	IntervalSeconds   = 1
+	TimeoutSeconds    = 10
+	ServicePort       = 60001
+	LLDARSObjectPath  = "./send_data"
+	BackupObjectsPath = "./backups"
+	BroadcastAddr     = "192.168.100.255:60000"
 )
 
 func Server(ctx context.Context, bcAddr string, origin string, mode lldars.LLDARSServeMode) {
