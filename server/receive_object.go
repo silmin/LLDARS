@@ -11,6 +11,8 @@ import (
 )
 
 func receiveObjects(conn net.Conn, path string) {
+	defer conn.Close()
+
 	for {
 		filename := path + genFilename()
 
