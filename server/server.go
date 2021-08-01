@@ -18,13 +18,16 @@ const (
 	LLDARSObjectPath     = "./send_data"
 	BackupObjectsPath    = "./backups"
 	BackupIntervalMinute = 1
+	BroadcastAddr        = "192.168.100.255:60000"
 )
 
 func Server(ctx context.Context, bcAddr string, origin string, mode lldars.LLDARSServeMode) {
 	serverId := uuid.New().ID()
 
 	if mode == lldars.RevivalMode {
-		sync(ctx, serverId)
+		syCtx, syClose := context.WithCancel(ctx)
+		defer syClose()
+		syncObjects(syCtx, serverId)
 	}
 	bcCtx, bcClose := context.WithCancel(ctx)
 	defer bcClose()
@@ -76,6 +79,7 @@ func handleService(conn net.Conn, serverId uint32) {
 
 		receiveBackupObjects(conn, rl, serverId)
 	}
+
 	return
 }
 

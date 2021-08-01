@@ -52,21 +52,23 @@ func discoverBroadcast(ctx context.Context, serverId uint32, servicePortChan cha
 
 func listenAck(ctx context.Context, udpLn *net.UDPConn, serviceAddrChan chan<- string) {
 	log.Println("Start listenAck()")
+	addr, _ := lldars.ParseIpPort(udpLn.LocalAddr().String())
+	localAddr := net.ParseIP(addr).To4()
 
 	for {
 		buf := make([]byte, lldars.LLDARSLayerSize)
 		l, err := udpLn.Read(buf)
 		Error(err)
-		msg := string(buf[:l])
-		rl := lldars.Unmarshal([]byte(msg))
+		rl := lldars.Unmarshal(buf[:l])
 
 		buf = make([]byte, rl.Length)
 		l, err = udpLn.Read(buf)
 		Error(err)
-		msg = string(buf[:l])
+		rl.Payload = buf[:l]
 
-		log.Printf("Recieve from: %v\tmsg: %s\n", rl.Origin, msg)
-
-		serviceAddrChan <- fmt.Sprintf("%s:%d", rl.Origin.String(), rl.ServicePort)
+		if !lldars.IsEqualIP(rl.Origin, localAddr) {
+			log.Printf("Recieve from: %v\tmsg: %s\n", rl.Origin, rl.Payload)
+			serviceAddrChan <- fmt.Sprintf("%s:%d", rl.Origin.String(), rl.ServicePort)
+		}
 	}
 }

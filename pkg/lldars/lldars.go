@@ -131,3 +131,7 @@ func ParseIpPort(addr string) (string, string) {
 		return s[0], s[1]
 	}
 }
+
+func IsEqualIP(a net.IP, b net.IP) bool {
+	return ip2int(a) == ip2int(b)
+}

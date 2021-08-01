@@ -4,9 +4,15 @@ import (
 	"context"
 	"log"
 	"net"
+	"sync"
 	"time"
 
 	"github.com/silmin/lldars/pkg/lldars"
+)
+
+const (
+	BackupIntervalMinute   = 1
+	BackupBCTimeoutSeconds = 10
 )
 
 func backupRegularly(ctx context.Context, serverId uint32, origin string) {
@@ -15,36 +21,46 @@ func backupRegularly(ctx context.Context, serverId uint32, origin string) {
 
 	for {
 		select {
+		case <-ctx.Done():
+			return
 		case <-ticker.C:
 			log.Println("--Backup Objects Regularly--")
-			backup(ctx, serverId, origin)
+			backupObjects(ctx, serverId, origin)
 		}
 	}
 }
 
-func backup(ctx context.Context, serverId uint32, origin string) {
-	dcCtx, dcClose := context.WithTimeout(ctx, time.Duration(TimeoutSeconds)*time.Second)
+func backupObjects(ctx context.Context, serverId uint32, origin string) {
+	dcCtx, dcClose := context.WithTimeout(ctx, time.Duration(BackupBCTimeoutSeconds)*time.Second)
 	defer dcClose()
 
 	serviceAddrChan := make(chan string)
 	go discoverBroadcast(dcCtx, serverId, serviceAddrChan)
 
+	var wg sync.WaitGroup
+
 	for {
 		select {
 		case addr := <-serviceAddrChan:
 			log.Printf("service addr: %s\n", addr)
-			go backupObjects(addr, serverId, origin)
+			wg.Add(1)
+			go handleBackup(wg, addr, serverId, origin)
 		case <-dcCtx.Done():
-			dcClose()
+			wg.Wait()
+			log.Println("--End Backup Objects--")
 			return
 		}
 	}
 }
 
-func backupObjects(addr string, serverId uint32, origin string) {
+func handleBackup(wg sync.WaitGroup, addr string, serverId uint32, origin string) {
 	conn, err := net.Dial("tcp", addr)
 	Error(err)
-	defer conn.Close()
+	defer func() {
+		conn.Close()
+		wg.Done()
+		log.Println("--Completed Backup--")
+	}()
 
 	ip, _ := lldars.ParseIpPort(conn.LocalAddr().String())
 	sl := lldars.NewBackupObjectRequest(serverId, net.ParseIP(ip).To4(), 0)
@@ -59,6 +75,5 @@ func backupObjects(addr string, serverId uint32, origin string) {
 		sendObjects(conn, serverId)
 	}
 
-	log.Println("--Completed Backup--")
 	return
 }
