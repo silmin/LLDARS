@@ -21,8 +21,13 @@ const (
 	BroadcastAddr          = "192.168.100.255:60000"
 )
 
-func Server(ctx context.Context, bcAddr string, origin string, mode lldars.LLDARSServeMode) {
-	serverId := uuid.New().ID()
+func Server(ctx context.Context, bcAddr string, origin string, id uint32, mode lldars.LLDARSServeMode) {
+	var serverId uint32
+	if id != 0 {
+		serverId = id
+	} else {
+		serverId = uuid.New().ID()
+	}
 	log.Printf("Server ID: %v\n", serverId)
 
 	if mode == lldars.RevivalMode {
