@@ -33,7 +33,7 @@ func backup(ctx context.Context, serverId uint32, origin string) {
 		select {
 		case addr := <-serviceAddrChan:
 			log.Printf("service addr: %s\n", addr)
-			backupObjects(addr, serverId, origin)
+			go backupObjects(addr, serverId, origin)
 		case <-dcCtx.Done():
 			dcClose()
 			return
