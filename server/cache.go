@@ -11,13 +11,13 @@ type item struct {
 	expires int64
 }
 
-type AckIdCache struct {
+type IdCache struct {
 	sync.Mutex
 	items map[uint32]*item
 }
 
-func NewAckIdCache() *AckIdCache {
-	c := &AckIdCache{items: make(map[uint32]*item)}
+func NewIdCache() *IdCache {
+	c := &IdCache{items: make(map[uint32]*item)}
 	go func() {
 		t := time.NewTicker(time.Second)
 		defer t.Stop()
@@ -47,7 +47,7 @@ func (i *item) IsExpired(t int64) bool {
 	return t > i.expires
 }
 
-func (c *AckIdCache) Put(id uint32, expires int64) {
+func (c *IdCache) Put(id uint32, expires int64) {
 	c.Lock()
 	if _, ok := c.items[id]; !ok {
 		c.items[id] = &item{
@@ -58,7 +58,7 @@ func (c *AckIdCache) Put(id uint32, expires int64) {
 	c.Unlock()
 }
 
-func (c *AckIdCache) Exists(id uint32) bool {
+func (c *IdCache) Exists(id uint32) bool {
 	c.Lock()
 	_, ok := c.items[id]
 	c.Unlock()

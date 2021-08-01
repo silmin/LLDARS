@@ -13,8 +13,9 @@ import (
 )
 
 const (
-	BackupIntervalMinute   = 1
-	BackupBCTimeoutSeconds = 10
+	BackupIntervalMinute      = 1
+	BackupBCTimeoutSeconds    = 10
+	ExpirationSecondsOfBackup = 60
 )
 
 func backupRegularly(ctx context.Context, serverId uint32, origin string) {
@@ -82,7 +83,7 @@ func handleBackup(wg *sync.WaitGroup, addr string, serverId uint32, origin strin
 	return
 }
 
-func receiveBackupObjects(conn net.Conn, rl lldars.LLDARSLayer, serverId uint32, cache *AckIdCache) {
+func receiveBackupObjects(conn net.Conn, rl lldars.LLDARSLayer, serverId uint32, cache *IdCache) {
 	defer conn.Close()
 
 	if cache.Exists(rl.ServerId) {
@@ -92,7 +93,7 @@ func receiveBackupObjects(conn net.Conn, rl lldars.LLDARSLayer, serverId uint32,
 	} else {
 		sl := lldars.NewAcceptBackupObject(serverId, localIP(conn), ServicePort)
 		conn.Write(sl.Marshal())
-		cache.Put(rl.ServerId, time.Now().Add(ExpirationSecondsOfAck*time.Second).UnixNano())
+		cache.Put(rl.ServerId, time.Now().Add(ExpirationSecondsOfBackup*time.Second).UnixNano())
 	}
 
 	path := getBackupDirPath(rl.ServerId)

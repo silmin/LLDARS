@@ -14,7 +14,7 @@ import (
 const (
 	IntervalSeconds        = 1
 	TimeoutSeconds         = 10
-	ExpirationSecondsOfAck = 10
+	ExpirationSecondsOfAck = 30
 	ServicePort            = 60001
 	LLDARSObjectPath       = "./send_data"
 	BackupObjectsPath      = "./backups"
@@ -35,16 +35,17 @@ func Server(ctx context.Context, bcAddr string, origin string, mode lldars.LLDAR
 	brCtx, brClose := context.WithCancel(ctx)
 	defer brClose()
 
-	cache := NewAckIdCache()
+	ackCache := NewIdCache()
+	backupCache := NewIdCache()
 
-	go listenDiscoverBroadcast(bcCtx, serverId, bcAddr, origin, cache)
+	go listenDiscoverBroadcast(bcCtx, serverId, bcAddr, origin, ackCache)
 	go backupRegularly(brCtx, serverId, origin)
-	listenService(serverId, cache)
+	listenService(serverId, backupCache)
 
 	return
 }
 
-func listenService(serverId uint32, cache *AckIdCache) {
+func listenService(serverId uint32, cache *IdCache) {
 	ln, err := net.Listen("tcp", fmt.Sprintf(":%d", ServicePort))
 	Error(err)
 	for {
@@ -54,7 +55,7 @@ func listenService(serverId uint32, cache *AckIdCache) {
 	}
 }
 
-func handleService(conn net.Conn, serverId uint32, cache *AckIdCache) {
+func handleService(conn net.Conn, serverId uint32, cache *IdCache) {
 	defer conn.Close()
 	buf := make([]byte, lldars.LLDARSLayerSize)
 	l, err := conn.Read(buf)
@@ -86,7 +87,7 @@ func handleService(conn net.Conn, serverId uint32, cache *AckIdCache) {
 	return
 }
 
-func listenDiscoverBroadcast(ctx context.Context, serverId uint32, listenAddr string, origin string, cache *AckIdCache) {
+func listenDiscoverBroadcast(ctx context.Context, serverId uint32, listenAddr string, origin string, cache *IdCache) {
 	udpAddr, err := net.ResolveUDPAddr("udp", listenAddr)
 	Error(err)
 	udpLn, err := net.ListenUDP("udp", udpAddr)
