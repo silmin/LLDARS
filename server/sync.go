@@ -52,12 +52,10 @@ func handleSync(wg *sync.WaitGroup, addr string, serverId uint32) {
 	sl := lldars.NewSyncObjectRequest(serverId, net.ParseIP(ip).To4(), 0)
 	conn.Write(sl.Marshal())
 
-	buf := make([]byte, lldars.LLDARSLayerSize)
-	l, err := conn.Read(buf)
-	Error(err)
-	rl := lldars.Unmarshal(buf[:l])
+	rl := ReadLLDARSHeader(conn)
 
 	if rl.Type == lldars.AcceptSyncObject {
+		_ = ReadLLDARSPayload(conn, rl.Length)
 		receiveObjects(conn, LLDARSObjectPath)
 	} else if rl.Type == lldars.RejectSyncObject {
 		log.Println("-Rejected Sync-")
