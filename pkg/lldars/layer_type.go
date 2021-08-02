@@ -25,8 +25,11 @@ var toLayerTypeString = map[LLDARSLayerType]string{
 	GetObjectRequest:    "GetObjectRequest",
 	DeliveryObject:      "DeliveryObject",
 	EndOfDelivery:       "EndOfDelivery",
+	ReceivedObjects:     "ReceivedObjects",
 	BackupObjectRequest: "BackupObjectRequest",
 	AcceptBackupObject:  "AcceptSyncObject",
+	RejectBackupObject:  "RejectBackupObject",
 	SyncObjectRequest:   "SyncObjectRequest",
 	AcceptSyncObject:    "AcceptSyncObject",
+	RejectSyncObject:    "RejectSyncObject",
 }
