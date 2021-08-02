@@ -5,6 +5,7 @@ import (
 	"log"
 	"net"
 	"path/filepath"
+	"time"
 
 	"github.com/silmin/lldars/pkg/lldars"
 )
@@ -24,12 +25,8 @@ func sendObjects(conn net.Conn, serverId uint32, path string) {
 	sl := lldars.NewEndOfDelivery(serverId, localIP(conn), ServicePort)
 	conn.Write(sl.Marshal())
 
-	rl := ReadLLDARSHeader(conn)
-	if rl.Type == lldars.ReceivedObjects {
-		_ = ReadLLDARSPayload(conn, rl.Length)
-		log.Println("-Receive ReceivedObjects-")
-		return
-	}
+	time.Sleep(time.Second)
+	return
 }
 
 func getObjectPaths(path string) []string {

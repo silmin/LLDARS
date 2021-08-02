@@ -58,7 +58,7 @@ func handleSync(wg *sync.WaitGroup, addr string, serverId uint32) {
 	rl := lldars.Unmarshal(buf[:l])
 
 	if rl.Type == lldars.AcceptSyncObject {
-		receiveObjects(conn, serverId, LLDARSObjectPath)
+		receiveObjects(conn, LLDARSObjectPath)
 	} else if rl.Type == lldars.RejectSyncObject {
 		log.Println("-Rejected Sync-")
 	}
