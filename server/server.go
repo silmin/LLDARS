@@ -102,22 +102,23 @@ func listenDiscoverBroadcast(ctx context.Context, serverId uint32, listenAddr st
 			if rl.ServerId != 0 {
 				if !cache.Exists(cacheAckKey(serverId)) {
 					cache.Push(cacheAckKey(serverId), rl.ServerId, time.Now().Add(ExpirationSecondsOfAck*time.Second).UnixNano())
-					ackBroadcast(serverId, rl, udpLn, origin)
+					ackBroadcast(serverId, rl, origin)
 				}
 			} else {
-				ackBroadcast(serverId, rl, udpLn, origin)
+				ackBroadcast(serverId, rl, origin)
 			}
 		}
 	}
 }
 
-func ackBroadcast(serverId uint32, rl lldars.LLDARSLayer, udpLn *net.UDPConn, origin string) {
+func ackBroadcast(serverId uint32, rl lldars.LLDARSLayer, origin string) {
 	sl := lldars.NewServerPortNotify(serverId, net.ParseIP(origin), ServicePort)
 	ipp := fmt.Sprintf("%s:%d", rl.Origin.String(), rl.ServicePort)
-	ackAddr, err := net.ResolveUDPAddr("udp", ipp)
+	conn, err := net.Dial("tcp", ipp)
 	Error(err)
-	udpLn.WriteToUDP([]byte(sl.Marshal()), ackAddr)
-	log.Printf("Ack to: %v\tmsg: %s\n", ackAddr.IP.String(), sl.Payload)
+	defer conn.Close()
+	conn.Write(sl.Marshal())
+	log.Printf("Ack to: %v\tmsg: %s\n", conn.RemoteAddr().String(), sl.Payload)
 }
 
 func localConnIP(conn net.Conn) net.IP {
