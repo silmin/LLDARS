@@ -65,11 +65,11 @@ func handleSync(wg *sync.WaitGroup, addr string, serverId uint32) {
 
 func sendSyncObjects(conn net.Conn, rl lldars.LLDARSLayer, serverId uint32) {
 	if !hasBackup(rl.ServerId) {
-		sl := lldars.NewRejectSyncObject(serverId, localIP(conn), ServicePort)
+		sl := lldars.NewRejectSyncObject(serverId, localConnIP(conn), ServicePort)
 		conn.Write(sl.Marshal())
 		return
 	}
-	sl := lldars.NewAcceptSyncObject(serverId, localIP(conn), ServicePort)
+	sl := lldars.NewAcceptSyncObject(serverId, localConnIP(conn), ServicePort)
 	conn.Write(sl.Marshal())
 
 	sendObjects(conn, serverId, getBackupDirPath(rl.ServerId))

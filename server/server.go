@@ -120,7 +120,7 @@ func ackBroadcast(serverId uint32, rl lldars.LLDARSLayer, udpLn *net.UDPConn, or
 	log.Printf("Ack to: %v\tmsg: %s\n", ackAddr.IP.String(), sl.Payload)
 }
 
-func localIP(conn net.Conn) net.IP {
+func localConnIP(conn net.Conn) net.IP {
 	ipstr, _ := lldars.ParseIpPort(conn.LocalAddr().String())
 	return net.ParseIP(ipstr).To4()
 }

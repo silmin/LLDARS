@@ -11,7 +11,7 @@ import (
 	"github.com/silmin/lldars/pkg/lldars"
 )
 
-func discoverBroadcast(ctx context.Context, serverId uint32, servicePortChan chan<- string) {
+func DiscoverBroadcast(ctx context.Context, serverId uint32, serviceAddrChan chan<- string) {
 	conn, err := net.Dial("udp", BroadcastAddr)
 	Error(err)
 	defer conn.Close()
@@ -22,18 +22,14 @@ func discoverBroadcast(ctx context.Context, serverId uint32, servicePortChan cha
 
 	// listen udp for ack
 	ip, _ := lldars.ParseIpPort(conn.LocalAddr().String())
-	udpAddr := &net.UDPAddr{
-		IP:   net.ParseIP(ip),
-		Port: 0,
-	}
-	udpLn, err := net.ListenUDP("udp", udpAddr)
+	ln, err := net.Listen("tcp", fmt.Sprintf("%v:0", ip))
+	Error(err)
 
 	listenCtx, listenCancel := context.WithTimeout(ctx, time.Duration(TimeoutSeconds)*time.Second)
 	defer listenCancel()
-	go listenAck(listenCtx, udpLn, servicePortChan)
+	go listenAck(listenCtx, ln, serviceAddrChan)
 
-	addr, port := lldars.ParseIpPort(udpLn.LocalAddr().String())
-	Error(err)
+	addr, port := lldars.ParseIpPort(ln.Addr().String())
 	p, _ := strconv.Atoi(port)
 	l := lldars.NewDiscoverBroadcast(serverId, net.ParseIP(addr).To4(), uint16(p))
 	msg := l.Marshal()
@@ -50,23 +46,21 @@ func discoverBroadcast(ctx context.Context, serverId uint32, servicePortChan cha
 	}
 }
 
-func listenAck(ctx context.Context, udpLn *net.UDPConn, serviceAddrChan chan<- string) {
+func listenAck(ctx context.Context, ln net.Listener, serviceAddrChan chan<- string) {
 	log.Println("Start listenAck()")
-	localAddr := localIP(udpLn)
-	bs := lldars.LLDARSLayerSize + len(lldars.ServicePortNotifyPayload)
-	cnt := 1
-
 	for {
-		s := bs * cnt
-		buf := make([]byte, s)
-		l, err := udpLn.Read(buf)
+		conn, err := ln.Accept()
 		Error(err)
-		rl := lldars.Unmarshal(buf[s-bs : l])
+		go handleAck(ctx, conn, serviceAddrChan)
+	}
+}
 
-		if !lldars.IsEqualIP(rl.Origin, localAddr) {
-			log.Printf("Receive Ack from: %v\tsId: %v\tmsg: %s\n", rl.Origin, rl.ServerId, rl.Payload)
-			serviceAddrChan <- fmt.Sprintf("%s:%d", rl.Origin.String(), rl.ServicePort)
-		}
-		cnt++
+func handleAck(ctx context.Context, conn net.Conn, serviceAddrChan chan<- string) {
+	defer conn.Close()
+	rl := ReadLLDARSHeader(conn)
+	if !lldars.IsEqualIP(rl.Origin, localConnIP(conn)) {
+		rl.Payload = ReadLLDARSPayload(conn, rl.Length)
+		log.Printf("Receive Ack from: %v\tsId: %v\tmsg: %s\n", rl.Origin, rl.ServerId, rl.Payload)
+		serviceAddrChan <- fmt.Sprintf("%s:%d", rl.Origin.String(), rl.ServicePort)
 	}
 }

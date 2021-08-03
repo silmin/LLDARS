@@ -6,7 +6,6 @@ import (
 	"io/ioutil"
 	"log"
 	"net"
-	"strconv"
 	"time"
 
 	"github.com/silmin/lldars/pkg/lldars"
@@ -31,7 +30,7 @@ func (c *Client) DoAct() {
 	defer close()
 
 	serviceAddr := make(chan string)
-	go c.discoverBroadcast(ctx, serviceAddr)
+	go server.DiscoverBroadcast(ctx, 0, serviceAddr)
 
 	addr := <-serviceAddr
 	log.Printf("service addr: %s\n", addr)
@@ -80,60 +79,6 @@ func (c *Client) getObjects(addr string) {
 
 	log.Println("End getObjects()")
 	return
-}
-
-func (c *Client) discoverBroadcast(ctx context.Context, serviceAddr chan<- string) {
-	conn, err := net.Dial("udp", BroadcastAddr)
-	Error(err)
-	defer conn.Close()
-	log.Printf("Connected > %s\n", BroadcastAddr)
-
-	ticker := time.NewTicker(time.Duration(IntervalSeconds) * time.Second)
-	defer ticker.Stop()
-
-	// listen udp for ack
-	ip, _ := lldars.ParseIpPort(conn.LocalAddr().String())
-	udpAddr := &net.UDPAddr{
-		IP:   net.ParseIP(ip),
-		Port: 0,
-	}
-	udpLn, err := net.ListenUDP("udp", udpAddr)
-
-	listenCtx, listenCancel := context.WithTimeout(ctx, time.Duration(TimeoutSeconds)*time.Second)
-	defer listenCancel()
-	go c.listenAck(listenCtx, udpLn, serviceAddr)
-
-	addr, port := lldars.ParseIpPort(udpLn.LocalAddr().String())
-	Error(err)
-	p, _ := strconv.Atoi(port)
-	l := lldars.NewDiscoverBroadcast(0, net.ParseIP(addr).To4(), uint16(p))
-	msg := l.Marshal()
-	for {
-		select {
-		case <-ctx.Done():
-			log.Println("End Broadcast")
-			return
-		case <-ticker.C:
-			// broadcast
-			conn.Write(msg)
-			log.Printf("Cast > %v : “%s”\n", BroadcastAddr, l.Payload)
-		}
-	}
-}
-
-func (c *Client) listenAck(ctx context.Context, udpLn *net.UDPConn, serviceAddr chan<- string) {
-	log.Println("Start listenAck()")
-
-	buf := make([]byte, lldars.LLDARSLayerSize+len(lldars.ServicePortNotifyPayload))
-	l, err := udpLn.Read(buf)
-	Error(err)
-	msg := string(buf[:l])
-	rl := lldars.Unmarshal([]byte(msg))
-	log.Println(rl)
-
-	log.Printf("Recieve from: %v\tmsg: %s\n", rl.Origin, rl.Payload)
-
-	serviceAddr <- fmt.Sprintf("%s:%d", rl.Origin.String(), rl.ServicePort)
 }
 
 func genFilename() string {

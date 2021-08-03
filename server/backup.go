@@ -84,11 +84,11 @@ func receiveBackupObjects(conn net.Conn, rl lldars.LLDARSLayer, serverId uint32,
 	defer conn.Close()
 
 	if rl.ServerId != 0 && cache.Exists(cacheBackupKey(rl.ServerId)) {
-		sl := lldars.NewRejectBackupObject(serverId, localIP(conn), ServicePort)
+		sl := lldars.NewRejectBackupObject(serverId, localConnIP(conn), ServicePort)
 		conn.Write(sl.Marshal())
 		return
 	} else {
-		sl := lldars.NewAcceptBackupObject(serverId, localIP(conn), ServicePort)
+		sl := lldars.NewAcceptBackupObject(serverId, localConnIP(conn), ServicePort)
 		conn.Write(sl.Marshal())
 		cache.Push(cacheBackupKey(rl.ServerId), rl.ServerId, time.Now().Add(ExpirationSecondsOfBackup*time.Second).UnixNano())
 	}
