@@ -38,7 +38,7 @@ func backupObjects(ctx context.Context, serverId uint32, origin string) {
 	defer dcClose()
 
 	serviceAddrChan := make(chan string)
-	go discoverBroadcast(dcCtx, serverId, serviceAddrChan)
+	go DiscoverBroadcast(dcCtx, serverId, serviceAddrChan)
 
 	wg := new(sync.WaitGroup)
 

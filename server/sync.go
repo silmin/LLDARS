@@ -21,7 +21,7 @@ func syncObjects(ctx context.Context, serverId uint32) {
 	defer dcClose()
 
 	serviceAddrChan := make(chan string)
-	go discoverBroadcast(dcCtx, serverId, serviceAddrChan)
+	go DiscoverBroadcast(dcCtx, serverId, serviceAddrChan)
 
 	wg := new(sync.WaitGroup)
 
