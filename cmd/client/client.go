@@ -1,4 +1,4 @@
-package client
+package main
 
 import (
 	"context"
@@ -9,7 +9,6 @@ import (
 	"time"
 
 	"github.com/silmin/lldars/pkg/lldars"
-	"github.com/silmin/lldars/server"
 )
 
 const (
@@ -30,7 +29,7 @@ func (c *Client) DoAct() {
 	defer close()
 
 	serviceAddr := make(chan string)
-	go server.DiscoverBroadcast(ctx, 0, serviceAddr)
+	go DiscoverBroadcast(ctx, 0, serviceAddr)
 
 	addr := <-serviceAddr
 	log.Printf("service addr: %s\n", addr)
@@ -56,11 +55,11 @@ func (c *Client) getObjects(addr string) {
 		filename := ReceiveObjectPath + genFilename()
 
 		// header
-		rl := server.ReadLLDARSHeader(conn)
+		rl := ReadLLDARSHeader(conn)
 		log.Printf("Recieve from: %v\tpayload-len: %d\n", rl.Origin, rl.Length)
 		log.Printf("serverId: %d\n", rl.ServerId)
 		if rl.Type == lldars.EndOfDelivery {
-			sl := lldars.NewReceivedObjects(0, localIP(conn), 0)
+			sl := lldars.NewReceivedObjects(0, localConnIP(conn), 0)
 			conn.Write(sl.Marshal())
 			log.Println("--End receiving objects--")
 			break
@@ -69,7 +68,7 @@ func (c *Client) getObjects(addr string) {
 		}
 
 		// object
-		obj := server.ReadLLDARSPayload(conn, rl.Length)
+		obj := ReadLLDARSPayload(conn, rl.Length)
 		if len(obj) != 0 {
 			err = ioutil.WriteFile(filename, obj, 0644)
 			Error(err)
@@ -86,7 +85,7 @@ func genFilename() string {
 	return fmt.Sprintf("%s.zip", t.Format("20060102T150405.000"))
 }
 
-func localIP(conn net.Conn) net.IP {
+func localConnIP(conn net.Conn) net.IP {
 	ipstr, _ := lldars.ParseIpPort(conn.LocalAddr().String())
 	return net.ParseIP(ipstr).To4()
 }
