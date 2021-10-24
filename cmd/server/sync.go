@@ -14,14 +14,14 @@ const (
 	SyncBCTimeoutSeconds = 10
 )
 
-func syncObjects(ctx context.Context, serverId uint32) {
+func (s Server) syncObjects(ctx context.Context) {
 	log.Println("--Start Sync Objects--")
 
 	dcCtx, dcClose := context.WithTimeout(ctx, time.Duration(SyncBCTimeoutSeconds)*time.Second)
 	defer dcClose()
 
 	serviceAddrChan := make(chan string)
-	go DiscoverBroadcast(dcCtx, serverId, serviceAddrChan)
+	go DiscoverBroadcast(dcCtx, s.Id, serviceAddrChan, s.ServerBCAddr)
 
 	wg := new(sync.WaitGroup)
 
@@ -30,7 +30,7 @@ func syncObjects(ctx context.Context, serverId uint32) {
 		case addr := <-serviceAddrChan:
 			log.Printf("service addr: %s\n", addr)
 			wg.Add(1)
-			go handleSync(wg, addr, serverId)
+			go handleSync(wg, addr, s.Id)
 		case <-dcCtx.Done():
 			wg.Wait()
 			log.Println("--End Sync Objects--")
@@ -65,11 +65,11 @@ func handleSync(wg *sync.WaitGroup, addr string, serverId uint32) {
 
 func sendSyncObjects(conn net.Conn, rl lldars.LLDARSLayer, serverId uint32) {
 	if !hasBackup(rl.ServerId) {
-		sl := lldars.NewRejectSyncObject(serverId, localConnIP(conn), ServicePort)
+		sl := lldars.NewRejectSyncObject(serverId, localConnIP(conn), lldars.ServicePort)
 		conn.Write(sl.Marshal())
 		return
 	}
-	sl := lldars.NewAcceptSyncObject(serverId, localConnIP(conn), ServicePort)
+	sl := lldars.NewAcceptSyncObject(serverId, localConnIP(conn), lldars.ServicePort)
 	conn.Write(sl.Marshal())
 
 	sendObjects(conn, serverId, getBackupDirPath(rl.ServerId))

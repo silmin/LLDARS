@@ -18,7 +18,7 @@ const (
 	ExpirationSecondsOfBackup = 60
 )
 
-func backupRegularly(ctx context.Context, serverId uint32, origin string) {
+func (s Server) backupRegularly(ctx context.Context) {
 	ticker := time.NewTicker(time.Duration(BackupIntervalMinute) * time.Minute)
 	defer ticker.Stop()
 
@@ -28,17 +28,17 @@ func backupRegularly(ctx context.Context, serverId uint32, origin string) {
 			return
 		case <-ticker.C:
 			log.Println("--Backup Objects Regularly--")
-			backupObjects(ctx, serverId, origin)
+			backupObjects(ctx, s.Id, s.ServerBCAddr)
 		}
 	}
 }
 
-func backupObjects(ctx context.Context, serverId uint32, origin string) {
+func backupObjects(ctx context.Context, serverId uint32, bcAddr string) {
 	dcCtx, dcClose := context.WithTimeout(ctx, time.Duration(BackupBCTimeoutSeconds)*time.Second)
 	defer dcClose()
 
 	serviceAddrChan := make(chan string)
-	go DiscoverBroadcast(dcCtx, serverId, serviceAddrChan)
+	go DiscoverBroadcast(dcCtx, serverId, serviceAddrChan, bcAddr)
 
 	wg := new(sync.WaitGroup)
 
@@ -47,7 +47,7 @@ func backupObjects(ctx context.Context, serverId uint32, origin string) {
 		case addr := <-serviceAddrChan:
 			log.Printf("service addr: %s\n", addr)
 			wg.Add(1)
-			go handleBackup(wg, addr, serverId, origin)
+			go handleBackup(wg, addr, serverId)
 		case <-dcCtx.Done():
 			wg.Wait()
 			log.Println("--End Backup Objects--")
@@ -56,7 +56,7 @@ func backupObjects(ctx context.Context, serverId uint32, origin string) {
 	}
 }
 
-func handleBackup(wg *sync.WaitGroup, addr string, serverId uint32, origin string) {
+func handleBackup(wg *sync.WaitGroup, addr string, serverId uint32) {
 	conn, err := net.Dial("tcp", addr)
 	Error(err)
 	defer func() {
@@ -65,8 +65,8 @@ func handleBackup(wg *sync.WaitGroup, addr string, serverId uint32, origin strin
 		log.Printf("-Completed Backup to %v-", addr)
 	}()
 
-	ip, _ := lldars.ParseIpPort(conn.LocalAddr().String())
-	sl := lldars.NewBackupObjectRequest(serverId, net.ParseIP(ip).To4(), 0)
+	ip := localConnIP(conn)
+	sl := lldars.NewBackupObjectRequest(serverId, ip, 0)
 	conn.Write(sl.Marshal())
 
 	rl := ReadLLDARSHeader(conn)
@@ -84,11 +84,11 @@ func receiveBackupObjects(conn net.Conn, rl lldars.LLDARSLayer, serverId uint32,
 	defer conn.Close()
 
 	if rl.ServerId != 0 && cache.Exists(cacheBackupKey(rl.ServerId)) {
-		sl := lldars.NewRejectBackupObject(serverId, localConnIP(conn), ServicePort)
+		sl := lldars.NewRejectBackupObject(serverId, localConnIP(conn), lldars.ServicePort)
 		conn.Write(sl.Marshal())
 		return
 	} else {
-		sl := lldars.NewAcceptBackupObject(serverId, localConnIP(conn), ServicePort)
+		sl := lldars.NewAcceptBackupObject(serverId, localConnIP(conn), lldars.ServicePort)
 		conn.Write(sl.Marshal())
 		cache.Push(cacheBackupKey(rl.ServerId), rl.ServerId, time.Now().Add(ExpirationSecondsOfBackup*time.Second).UnixNano())
 	}

@@ -11,11 +11,11 @@ import (
 	"github.com/silmin/lldars/pkg/lldars"
 )
 
-func DiscoverBroadcast(ctx context.Context, serverId uint32, serviceAddrChan chan<- string) {
-	conn, err := net.Dial("udp", BroadcastAddr)
+func DiscoverBroadcast(ctx context.Context, serverId uint32, serviceAddrChan chan<- string, bcAddr string) {
+	conn, err := net.Dial("udp", bcAddr)
 	Error(err)
 	defer conn.Close()
-	log.Printf("Connected > %s\n", BroadcastAddr)
+	log.Printf("Connected > %s\n", bcAddr)
 
 	ticker := time.NewTicker(time.Duration(IntervalSeconds) * time.Second)
 	defer ticker.Stop()
@@ -41,7 +41,7 @@ func DiscoverBroadcast(ctx context.Context, serverId uint32, serviceAddrChan cha
 		case <-ticker.C:
 			// broadcast
 			conn.Write(msg)
-			log.Printf("Cast > %v : “%s”\n", BroadcastAddr, l.Payload)
+			log.Printf("Cast > %v : “%s”\n", bcAddr, l.Payload)
 		}
 	}
 }

@@ -19,6 +19,9 @@ type LLDARSLayerType uint8
 type LLDARSServeMode uint8
 
 const (
+	ServicePort                = 60000
+	ClientBCPort               = 60001
+	ServerBCPort               = 60002
 	LLDARSLayerSize            = 1 + 4 + net.IPv4len + 2 + 8
 	DiscoverBroadcastPayload   = "Is available LLDARS server on this network ?"
 	ServicePortNotifyPayload   = "--NotifyServerPortPayload--"
