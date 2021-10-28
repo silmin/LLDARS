@@ -77,15 +77,21 @@ func (s Server) Serve(ctx context.Context) {
 		defer syClose()
 		s.syncObjects(syCtx)
 	}
-	bcCtx, bcClose := context.WithCancel(ctx)
-	defer bcClose()
+	bcCCtx, bcCClose := context.WithCancel(ctx)
+	bcSCtx, bcSClose := context.WithCancel(ctx)
 	brCtx, brClose := context.WithCancel(ctx)
-	defer brClose()
+	defer func() {
+		brClose()
+		bcCClose()
+		bcSClose()
+	}()
 
-	ackCache := NewIdCache()
+	ackClientCache := NewIdCache()
+	ackServerCache := NewIdCache()
 	backupCache := NewIdCache()
 
-	go s.listenDiscoverBroadcast(bcCtx, joinIpPort(net.IPv4zero.String(), strconv.Itoa(lldars.ServerBCPort)), ackCache)
+	go s.listenDiscoverBroadcast(bcCCtx, joinIpPort(net.IPv4zero.String(), strconv.Itoa(lldars.ClientBCPort)), ackClientCache)
+	go s.listenDiscoverBroadcast(bcSCtx, joinIpPort(net.IPv4zero.String(), strconv.Itoa(lldars.ServerBCPort)), ackServerCache)
 	go s.backupRegularly(brCtx)
 	s.listenService(backupCache)
 
