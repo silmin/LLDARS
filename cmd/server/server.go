@@ -101,6 +101,7 @@ func (s Server) Serve(ctx context.Context) {
 func (s Server) listenService(cache *IdCache) {
 	ln, err := net.Listen("tcp", fmt.Sprintf(":%d", lldars.ServicePort))
 	Error(err)
+	log.Printf("Listened Service :%d tcp\n", lldars.ServicePort)
 	for {
 		conn, err := ln.Accept()
 		Error(err)
