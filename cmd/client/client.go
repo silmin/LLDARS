@@ -108,7 +108,12 @@ func genFilename() string {
 
 func localConnIP(conn net.Conn) net.IP {
 	ipstr, _ := lldars.ParseIpPort(conn.LocalAddr().String())
-	return net.ParseIP(ipstr).To4()
+	ip := net.ParseIP(ipstr).To4()
+	if ip == nil {
+		return net.ParseIP("0.0.0.0").To4()
+	} else {
+		return ip
+	}
 }
 
 func bcAddr(n *net.IPNet) (net.IP, error) {
