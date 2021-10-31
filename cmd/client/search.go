@@ -61,6 +61,6 @@ func handleAck(ctx context.Context, conn net.Conn, serviceAddrChan chan<- string
 	if !lldars.IsEqualIP(rl.Origin, localConnIP(conn)) {
 		rl.Payload = ReadLLDARSPayload(conn, rl.Length)
 		log.Printf("Receive Ack from: %v\tsId: %v\tmsg: %s\n", rl.Origin, rl.ServerId, rl.Payload)
-		serviceAddrChan <- fmt.Sprintf("%s:%d", rl.Origin.String(), rl.ServicePort)
+		serviceAddrChan <- fmt.Sprintf("%s:%d", remoteConnIP(conn).String(), rl.ServicePort)
 	}
 }

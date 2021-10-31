@@ -116,6 +116,16 @@ func localConnIP(conn net.Conn) net.IP {
 	}
 }
 
+func remoteConnIP(conn net.Conn) net.IP {
+	ipstr, _ := lldars.ParseIpPort(conn.RemoteAddr().String())
+	ip := net.ParseIP(ipstr).To4()
+	if ip == nil {
+		return net.ParseIP("0.0.0.0").To4()
+	} else {
+		return ip
+	}
+}
+
 func bcAddr(n *net.IPNet) (net.IP, error) {
 	if n.IP.To4() == nil {
 		return net.IP{}, errors.New("does not support IPv6 addresses.")
