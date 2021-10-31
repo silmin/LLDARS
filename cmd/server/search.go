@@ -27,7 +27,7 @@ func DiscoverBroadcast(ctx context.Context, serverId uint32, serviceAddrChan cha
 
 	listenCtx, listenCancel := context.WithTimeout(ctx, time.Duration(TimeoutSeconds)*time.Second)
 	defer listenCancel()
-	go listenAck(listenCtx, ln, serviceAddrChan)
+	go listenAck(listenCtx, ln, serverId, serviceAddrChan)
 
 	addr, port := lldars.ParseIpPort(ln.Addr().String())
 	p, _ := strconv.Atoi(port)
@@ -46,19 +46,19 @@ func DiscoverBroadcast(ctx context.Context, serverId uint32, serviceAddrChan cha
 	}
 }
 
-func listenAck(ctx context.Context, ln net.Listener, serviceAddrChan chan<- string) {
+func listenAck(ctx context.Context, ln net.Listener, serverId uint32, serviceAddrChan chan<- string) {
 	log.Println("Start listenAck()")
 	for {
 		conn, err := ln.Accept()
 		Error(err)
-		go handleAck(ctx, conn, serviceAddrChan)
+		go handleAck(ctx, conn, serverId, serviceAddrChan)
 	}
 }
 
-func handleAck(ctx context.Context, conn net.Conn, serviceAddrChan chan<- string) {
+func handleAck(ctx context.Context, conn net.Conn, serverId uint32, serviceAddrChan chan<- string) {
 	defer conn.Close()
 	rl := ReadLLDARSHeader(conn)
-	if !lldars.IsEqualIP(rl.Origin, localConnIP(conn)) {
+	if !lldars.IsEqualIP(rl.Origin, localConnIP(conn)) && rl.ServerId != serverId {
 		rl.Payload = ReadLLDARSPayload(conn, rl.Length)
 		log.Printf("Receive Ack from: %v\tsId: %v\tmsg: %s\n", rl.Origin, rl.ServerId, rl.Payload)
 		serviceAddrChan <- fmt.Sprintf("%s:%d", rl.Origin.String(), rl.ServicePort)

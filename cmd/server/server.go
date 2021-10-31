@@ -149,7 +149,7 @@ func (s Server) listenDiscoverBroadcast(ctx context.Context, listenAddr string, 
 		rl := lldars.Unmarshal(msg)
 		log.Printf("Receive BC from: %v\n", rl.Origin)
 
-		if rl.Type == lldars.DiscoverBroadcast && rl.Origin.String() != origin {
+		if rl.Type == lldars.DiscoverBroadcast && rl.Origin.String() != origin && rl.ServerId != s.Id {
 			if rl.ServerId != 0 {
 				if !cache.Exists(cacheAckKey(s.Id)) {
 					cache.Push(cacheAckKey(s.Id), rl.ServerId, time.Now().Add(ExpirationSecondsOfAck*time.Second).UnixNano())
@@ -168,7 +168,6 @@ func ackBroadcast(serverId uint32, rl lldars.LLDARSLayer, origin string) {
 	conn, err := net.Dial("tcp", ipp)
 	Error(err)
 	defer conn.Close()
-	fmt.Println("sl: ", sl)
 	conn.Write(sl.Marshal())
 	log.Printf("Ack to: %v\tmsg: %s\n", conn.RemoteAddr().String(), sl.Payload)
 }
