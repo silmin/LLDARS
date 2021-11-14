@@ -166,7 +166,10 @@ func ackBroadcast(serverId uint32, rl lldars.LLDARSLayer, origin string) {
 	sl := lldars.NewServerPortNotify(serverId, net.ParseIP(origin), lldars.ServicePort)
 	ipp := fmt.Sprintf("%s:%d", rl.Origin.String(), rl.ServicePort)
 	conn, err := net.Dial("tcp", ipp)
-	Error(err)
+	if err != nil {
+		log.Printf("Missed Ack to %s", ipp)
+		return
+	}
 	defer conn.Close()
 	conn.Write(sl.Marshal())
 	log.Printf("Ack to: %v\tmsg: %s\n", conn.RemoteAddr().String(), sl.Payload)
