@@ -7,6 +7,8 @@ import (
 	"path/filepath"
 	"time"
 
+	"github.com/yargevad/filepathx"
+
 	"github.com/silmin/lldars/pkg/lldars"
 )
 
@@ -30,8 +32,8 @@ func sendObjects(conn net.Conn, serverId uint32, path string) {
 }
 
 func getObjectPaths(path string) []string {
-	pat := path + "*.zip"
-	files, err := filepath.Glob(pat)
+	pat := filepath.Join(path, "/**/*.zip")
+	files, err := filepathx.Glob(pat)
 	Error(err)
 	return files
 }
